@@ -1,7 +1,10 @@
 /* SDN online connector. No privileged keys or Discord secrets belong in this file. */
 (() => {
   'use strict';
-  const cfg = window.SDN_CONFIG || {};
+  const cfg = { ...(window.SDN_CONFIG || {}) };
+cfg.supabaseUrl = String(cfg.supabaseUrl || '')
+  .trim()
+  .replace(/\/+$/, '');
   const configured = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.supabaseUrl || '') &&
     typeof cfg.supabasePublishableKey === 'string' &&
     !cfg.supabasePublishableKey.includes('YOUR_') && cfg.supabasePublishableKey.length > 20;
