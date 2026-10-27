@@ -186,7 +186,7 @@
   }
 
   window.SDNBackend = {
-    enabled: configured, prepare, session, login, logout, verify, loadAll, uploadImage,
+    enabled: configured, prepare, session, login, logout, verify, loadAll,
     submitTicket, reviewTicket, setCharacterStatus, submitReport, reviewReport,
     uploadPortraitBlob, originalBlob, publishPortrait,
     proposalImageUrl: path => previewUrls.get(path) || '',
