@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 *.local
 supabase/functions/.env
 node_modules/
