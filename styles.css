@@ -250,3 +250,108 @@ body.secure-locked .app-shell { display: none !important; }
 .record-discord-link:hover{background:#bcd5c9}
 
 .ticket-portrait-compare{padding:12px;background:#e6eadb;margin:12px 0;border:1px dashed #90a092;display:flex;align-items:center;gap:15px;flex-wrap:wrap}.ticket-portrait-compare span{font:bold 12px monospace;color:#345145}.ticket-portrait-compare img{width:96px;height:120px;object-fit:cover;border:2px solid #2c4a3d}
+
+/* SDN v0.7.2 – Einheitliches Portraitformat 4:5 */
+
+/* Portrait in der Personalakte */
+.portrait-container {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 5;
+}
+
+.portrait-container img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Portraits in der Charakterliste */
+.roster-image {
+  flex: 0 0 100px;
+  width: 100px;
+  height: 125px;
+  aspect-ratio: 4 / 5;
+  align-self: center;
+}
+
+.roster-image img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  filter: none;
+}
+
+/* Portraits im Beziehungsreiter */
+.relationship-portrait {
+  width: 80px;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  align-self: flex-start;
+}
+
+.relationship-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Vorschau bei Bearbeitungen und Tickets */
+.sdn-portrait-preview {
+  width: 96px;
+  height: 120px;
+  aspect-ratio: 4 / 5;
+  object-fit: contain;
+  object-position: center;
+}
+
+.ticket-portrait-compare img {
+  width: 96px;
+  height: 120px;
+  aspect-ratio: 4 / 5;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Portraits für die zukünftige Aktenübersicht */
+.sdn-directory-portrait {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: #516e65;
+}
+
+.sdn-directory-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Anpassungen für Tablets */
+@media (max-width: 1200px) and (min-width: 861px) {
+  .roster-image {
+    width: 88px;
+    height: 110px;
+    flex-basis: 88px;
+  }
+}
+
+/* Anpassungen für Smartphones */
+@media (max-width: 550px) {
+  .portrait-container {
+    height: auto;
+    min-height: 0;
+    width: 100%;
+    max-width: 320px;
+  }
+}
