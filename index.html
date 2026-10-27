@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#101b1e" />
+  <meta name="description" content="Inoffizieller SDN-Personalakten-Prototyp für ein Discord-Rollenspiel." />
+  <title>SDN · Personnel Archive — Mitgliederportal</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="config.js" defer></script>
+  <script src="backend.js" defer></script>
+  <script src="portrait-editor.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <section id="authGate" class="auth-gate" role="region" aria-label="Geschützter Zugriff">
+    <div class="auth-card">
+      <div class="auth-wordmark">S<span>D</span>N<span>.</span></div>
+      <p class="eyebrow">SUPERHERO DISPATCH NETWORK / SECURITY</p>
+      <h1 id="authTitle">PERSONNEL ACCESS</h1>
+      <p id="authMessage">Nur Mitglieder des Discord-RP-Servers dürfen Personalakten lesen.</p>
+      <button class="dialog-primary" type="button" id="authLogin" hidden>MIT DISCORD ANMELDEN ↗</button>
+      <button class="dialog-secondary" type="button" id="authRetry">ERNEUT PRÜFEN ↻</button>
+      <small>INOFFIZIELLES DISPATCH-FANPROJEKT</small>
+    </div>
+  </section>
+  <div class="site-noise" aria-hidden="true"></div>
+  <div class="app-shell">
+    <aside class="rail" aria-label="Navigation">
+      <div class="rail-brand" title="SDN – Personalarchiv">S<span>◆</span>N</div>
+      <div class="rail-nav">
+        <button type="button" class="rail-button active" data-action="roster" aria-label="Personalübersicht" title="Personalübersicht">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M7 9h5M7 13h10M7 17h7M16 8h2"/></svg>
+        </button>
+        <button type="button" class="rail-button" data-action="missions" aria-label="Einsätze" title="Einsätze">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg>
+        </button>
+      </div>
+      <div class="rail-bottom" title="Mitgliederportal">v0.6<span>●</span></div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div class="topbar-left"><span class="tiny-square"></span><span>SUPERHERO DISPATCH NETWORK</span><span class="top-separator">/</span><span class="topbar-muted">PERSONNEL DIVISION</span></div>
+        <div class="topbar-right"><span class="sync-indicator"><i></i> AUTH REQUIRED</span><span class="topbar-cut">//</span><button class="mode-toggle" id="gmToggle" type="button" title="Simulierte Ansicht der Spielleitung umschalten">SPIELERANSICHT</button><span class="session-marker">DEMO SESSION</span></div>
+      </header>
+      <div class="preview-warning" role="note"><strong>GESCHÜTZTES ARCHIV</strong><span>Der Inhalt wird erst nach Discord-Anmeldung, Serverprüfung und erfolgreicher Datenbankabfrage geladen.</span><button type="button" id="privacyInfo" aria-label="Datenschutzhinweis anzeigen">?</button></div>
+
+      <main class="workspace">
+        <section class="workspace-intro">
+          <div>
+            <div class="eyebrow"><span class="eyebrow-line"></span> INTERNE DATENBANK <span class="mono muted" id="introCode">// 00. PERSONNEL</span></div>
+            <h1 id="introTitle">PERSONNEL <em>ARCHIVE<span class="title-period">.</span></em></h1>
+            <p id="introSubtitle">Vertrauliche Charakterakten · Registrierte SDN-Angehörige</p>
+          </div>
+          <div class="intro-stamp"><span>SDN</span><small>PERSONNEL<br>RECORDS</small></div>
+        </section>
+
+        <div class="work-grid" id="personnelView">
+          <section class="roster-panel" aria-label="Personalliste">
+            <div class="panel-heading"><span>01 / VERZEICHNIS</span><span id="rosterCount">001 FILE</span></div>
+            <div class="roster-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input id="searchInput" type="search" placeholder="Name, Alias oder ID suchen..." autocomplete="off" aria-label="Charaktere durchsuchen" /><kbd>/</kbd></div>
+            <div class="filter-row" role="group" aria-label="Akten filtern"><button class="filter-chip selected" type="button" data-filter="all">ALLE</button><button class="filter-chip" type="button" data-filter="approved">APPROVED</button><button class="filter-chip" type="button" data-filter="pending">OFFEN</button><button class="filter-chip" type="button" data-filter="draft">ENTWÜRFE</button></div>
+            <div class="roster-list" id="rosterList" aria-live="polite"></div>
+            <button type="button" class="add-file" id="addNew"><span class="add-plus">＋</span><span><strong>NEUEN CHARAKTER ANLEGEN</strong><small>Neue Akte zur Prüfung einreichen</small></span><span class="add-arrow">↗</span></button>
+            <div class="roster-bottom"><span class="light-led"></span><span>ARCHIVSTATUS</span><strong>SERVERDATEN</strong></div>
+          </section>
+
+          <section class="record-panel" id="recordPanel" aria-label="Personalakte">
+            <div class="record-topbar"><div class="record-crumb">AKTENREGISTER <span>/</span> <strong id="fileCrumb">—</strong></div><div class="record-top-actions"><button class="text-button" id="auditButton" type="button">ÄNDERUNGEN <span>↗</span></button><button class="text-button" id="printButton" type="button">DRUCKEN <span>↗</span></button><button class="outline-button" id="approveButton" type="button" hidden>AKTE FREIGEBEN ✓</button><button class="outline-button" id="editButton" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4-.7L19.3 8a2.1 2.1 0 0 0-3-3L5 16.3 4 20Z"/></svg> DATEN BEARBEITEN</button></div></div>
+            <div id="recordBody"></div>
+          </section>
+        </div>
+        <section class="missions-view" id="missionsView" hidden aria-label="Einsatzberichte"></section>
+        <footer class="footer"><span>SDN / PERSONNEL RECORD SYSTEM</span><span>INOFFIZIELLES DISPATCH-FANPROJEKT · NICHT MIT DEM SPIEL VERBUNDEN</span><button type="button" id="resetDemo">DATEN ZURÜCKSETZEN ↺</button></footer>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="editDialog" class="edit-dialog" aria-labelledby="dialogTitle">
+    <form id="editForm" novalidate>
+      <header class="dialog-header"><div><span class="eyebrow">PERSONNEL DATA ENTRY</span><h2 id="dialogTitle">AKTE BEARBEITEN</h2></div><button type="button" class="dialog-close" id="closeDialog" aria-label="Schließen">×</button></header>
+      <div class="dialog-body">
+        <p class="dialog-description"><strong>Vorschlag statt Direktänderung:</strong> Bearbeite beliebige Abschnitte. Erst nach Genehmigung durch die Spielleitung werden die Änderungen in der Akte sichtbar. Änderungen an Attributen oder Kräften werden besonders markiert.</p><div class="pending-edit-warning" id="pendingEditWarning" hidden>WEITERE TICKETS KÖNNEN JEDERZEIT EINGEREICHT WERDEN.</div>
+        <div id="editFields"></div><div class="ticket-explanation"><label for="proposalComment">ANMERKUNG ZUM ÄNDERUNGSANTRAG <span>OPTIONAL</span></label><textarea id="proposalComment" maxlength="1500" rows="3" placeholder="z. B. Ich habe die Fähigkeit wie besprochen angepasst. / Neuer Portraitausschnitt."></textarea><p>Alle Änderungen dieses Formulars bilden <strong>ein eigenes Ticket</strong>. Du kannst mehrere Tickets einreichen, auch solange andere noch geprüft werden.</p></div><p id="formError" class="form-error" role="alert"></p>
+      </div>
+      <footer class="dialog-footer"><button class="dialog-secondary" id="cancelEdit" type="button">ABBRECHEN</button><button class="dialog-primary" id="submitEdit" type="submit">ÄNDERUNGEN ABSENDEN ↗</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="missionDialog" class="edit-dialog mission-dialog" aria-labelledby="missionDialogTitle">
+    <form id="missionForm" novalidate>
+      <header class="dialog-header"><div><span class="eyebrow">OPERATION FIELD REPORT</span><h2 id="missionDialogTitle">EINSATZPROTOKOLL EINREICHEN</h2></div><button type="button" class="dialog-close" id="closeMissionDialog" aria-label="Schließen">×</button></header>
+      <div class="dialog-body">
+        <p class="dialog-description">Standardisiertes Einsatzprotokoll. Neue Berichte sind zuerst <strong>zur Freigabe eingereicht</strong>. Erst nach Genehmigung erscheinen sie in den verknüpften Personalakten.</p>
+        <div class="form-grid">
+          <label class="span2">EINSATZBEZEICHNUNG *<input name="title" maxlength="100" required placeholder="z. B. Zwischenfall am Hafen" /></label>
+          <label>EINSATZDATUM *<input name="date" type="date" required /></label><label>EINSATZORT<input name="location" maxlength="110" placeholder="Ort / Einsatzgebiet" /></label>
+          <label class="span2">BETEILIGTE HELDEN *<span class="field-hint">Mindestens einen bestehenden Charakter auswählen.</span><div class="participant-checks" id="participantChecks"></div></label>
+          <label class="span2">AUSGANGSLAGE *<textarea name="situation" rows="3" required maxlength="3000" placeholder="Was war bekannt? Wie kam es zur Alarmierung?"></textarea></label>
+          <label class="span2">EINSATZVERLAUF *<textarea name="events" rows="5" required maxlength="5000" placeholder="Was ist in welcher Reihenfolge geschehen?"></textarea></label>
+          <label>ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option><option value="open">Noch offen</option></select></label>
+          <label>ZIVILE INFRASTRUKTUR BETROFFEN?<select name="damageStatus"><option value="no">Keine bekannten Schäden</option><option value="yes">Ja, Schäden entstanden</option><option value="unknown">Noch ungeklärt</option></select></label>
+          <label class="span2">SCHÄDEN AN ZIVILEN EINRICHTUNGEN<textarea name="damages" rows="3" maxlength="3000" placeholder="Gebäude, Fahrzeuge, Sachschäden, Umfang, bekannte Folgen …"></textarea></label>
+          <label class="span2">ZUSATZVERMERKE / BESONDERE VORKOMMNISSE<textarea name="notes" rows="3" maxlength="3000" placeholder="Zeugen, zusätzliche Hinweise, ungeklärte Punkte …"></textarea></label>
+        </div><p id="missionError" class="form-error" role="alert"></p>
+      </div>
+      <footer class="dialog-footer"><button class="dialog-secondary" id="cancelMission" type="button">ABBRECHEN</button><button class="dialog-primary" type="submit">ZUR PRÜFUNG EINREICHEN ↗</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="privacyDialog" class="privacy-dialog" aria-labelledby="privacyTitle"><div class="privacy-inner"><button id="closePrivacy" class="dialog-close" type="button" aria-label="Schließen">×</button><div class="eyebrow">SECURITY NOTICE</div><h2 id="privacyTitle">ZUGRIFFSSCHUTZ</h2><p>Diese Version demonstriert nur das Design. Sie prüft <strong>keine Discord-Servermitgliedschaften</strong> und besitzt keine geschützte Datenbank. Die mitgelieferte Testakte liegt als statische Beispieldatei vor. Für den echten Betrieb benötigen wir Discord OAuth, eine serverseitige Mitgliedschaftsprüfung sowie Datenbank-Zugriffsregeln.</p><button class="dialog-primary" id="gotItPrivacy" type="button">VERSTANDEN</button></div></dialog>
+</body>
+</html>

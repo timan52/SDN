@@ -1,0 +1,5 @@
+[functions.verify-discord]
+verify_jwt = true
+
+[functions.publish-portrait]
+verify_jwt = true
