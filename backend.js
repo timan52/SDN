@@ -188,6 +188,19 @@
   async function setCharacterStatus(dbId, approved) {
     handle(await client.rpc('sdn_set_character_status', { p_character_id: dbId, p_approved: approved }));
   }
+  // These RPCs enforce Discord-verified SL privileges in PostgreSQL.
+  async function deleteCharacter(characterId) {
+    await session();
+    return handle(await client.rpc('sdn_delete_character', { p_character_id: characterId }));
+  }
+  async function deleteReport(reportId) {
+    await session();
+    return handle(await client.rpc('sdn_delete_report', { p_report_id: reportId }));
+  }
+  async function setCharacterActivity(characterId, activity) {
+    await session();
+    return handle(await client.rpc('sdn_set_character_activity', { p_character_id: characterId, p_activity: activity }));
+  }
   async function addFileNote(characterId, authorCharacterId, body) {
     const result=await client.rpc('sdn_add_file_note', {p_character_id:characterId,p_author_character_id:authorCharacterId,p_body:body});
     return handle(result);
@@ -202,6 +215,7 @@
   window.SDNBackend = {
     enabled: configured, prepare, session, login, logout, verify, loadAll,
     submitTicket, reviewTicket, setCharacterStatus, submitReport, reviewReport, addFileNote,
+    deleteCharacter, deleteReport, setCharacterActivity,
     uploadPortraitBlob, originalBlob, publishPortrait,
     proposalImageUrl: path => previewUrls.get(path) || '',
     imageUrl: path => (typeof path === 'string' && /^https:\/\/[a-z0-9-]+\.github\.io\//i.test(path) ? path : ''),

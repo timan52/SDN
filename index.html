@@ -67,7 +67,7 @@
         <div class="work-grid" id="personnelView">
 
           <section class="record-panel" id="recordPanel" aria-label="Personalakte">
-            <div class="record-topbar"><div class="record-crumb"><button type="button" class="sdn-back-button" id="backDirectory">← ALLE HELDEN</button> AKTENREGISTER <span>/</span> <strong id="fileCrumb">—</strong></div><div class="record-top-actions"><button class="text-button" id="auditButton" type="button">ÄNDERUNGEN <span>↗</span></button><button class="text-button" id="printButton" type="button">DRUCKEN <span>↗</span></button><button class="outline-button" id="approveButton" type="button" hidden>AKTE FREIGEBEN ✓</button><button class="outline-button" id="editButton" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4-.7L19.3 8a2.1 2.1 0 0 0-3-3L5 16.3 4 20Z"/></svg> DATEN BEARBEITEN</button></div></div>
+            <div class="record-topbar"><div class="record-crumb"><button type="button" class="sdn-back-button" id="backDirectory">← ALLE HELDEN</button> AKTENREGISTER <span>/</span> <strong id="fileCrumb">—</strong></div><div class="record-top-actions"><button class="text-button" id="auditButton" type="button">ÄNDERUNGEN <span>↗</span></button><button class="text-button" id="printButton" type="button">DRUCKEN <span>↗</span></button><button class="outline-button" id="approveButton" type="button" hidden>AKTE FREIGEBEN ✓</button><button class="outline-button sdn-status-action" id="activityButton" type="button" hidden>STATUS FESTLEGEN</button><button class="outline-button sdn-danger-button" id="deleteCharacterButton" type="button" hidden>AKTE LÖSCHEN</button><button class="outline-button" id="editButton" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4-.7L19.3 8a2.1 2.1 0 0 0-3-3L5 16.3 4 20Z"/></svg> DATEN BEARBEITEN</button></div></div>
             <div id="recordBody"></div>
           </section>
         </div>
@@ -85,6 +85,25 @@
         <div id="editFields"></div><div class="ticket-explanation"><label for="proposalComment">ANMERKUNG ZUM ANTRAG <span>OPTIONAL</span></label><textarea id="proposalComment" maxlength="1500" rows="3" placeholder="z. B. Ich habe die Fähigkeit wie besprochen angepasst. / Neuer Portraitausschnitt."></textarea><p>Alle Änderungen dieses Formulars bilden <strong>ein eigenes Ticket</strong>. Du kannst mehrere Tickets einreichen, auch solange andere noch geprüft werden.</p></div><p id="formError" class="form-error" role="alert"></p>
       </div>
       <footer class="dialog-footer"><button class="dialog-secondary" id="cancelEdit" type="button">ABBRECHEN</button><button class="dialog-primary" id="submitEdit" type="submit">ABSENDEN</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="activityDialog" class="sdn-activity-dialog" aria-labelledby="activityDialogTitle">
+    <form id="activityForm">
+      <div class="eyebrow">PERSONNEL / STATUS</div>
+      <h2 id="activityDialogTitle">AKTIVITÄTSSTATUS FESTLEGEN</h2>
+      <p id="activityHelp">Der Charakter kann nach seiner Freigabe als aktiv oder inaktiv gekennzeichnet werden.</p>
+      <label>STATUS
+        <select name="activityStatus" required>
+          <option value="active">Aktiv</option>
+          <option value="inactive">Inaktiv</option>
+        </select>
+      </label>
+      <label id="activityCommentWrap">ANMERKUNG ZUM ANTRAG (OPTIONAL)
+        <textarea name="activityComment" maxlength="1500" rows="3" placeholder="Grund für die Änderung …"></textarea>
+      </label>
+      <p class="form-error" id="activityError" role="alert"></p>
+      <div class="sdn-activity-buttons"><button type="button" id="activityCancel" class="dialog-secondary">ABBRECHEN</button><button type="submit" class="dialog-primary" id="activitySubmit">ABSENDEN</button></div>
     </form>
   </dialog>
 

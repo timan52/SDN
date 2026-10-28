@@ -7,12 +7,13 @@
   const show = value => String(value ?? '').trim() ? safe(value) : '<span class="missing-inline">Keine Daten vorhanden</span>';
   const paragraph = value => `<p class="dossier-paragraph">${show(value)}</p>`;
   const STAT_KEYS = [['combat','COMBAT'],['vigor','VIGOR'],['mobility','MOBILITY'],['charisma','CHARISMA'],['intellect','INTELLECT']];
+  const ACTIVITY = {active:'AKTIV',inactive:'INAKTIV'};
   const TABS = [['identity','01 IDENTITÄT'],['attributes','02 ATTRIBUTE'],['abilities','03 FÄHIGKEITEN'],['personality','04 PERSÖNLICHKEIT'],['history','05 HISTORIE'],['relationships','06 BEZIEHUNGEN'],['missions','07 EINSÄTZE'],['file-notes','08 AKTENNOTIZ'],['secret','09 TOP SECRET']];
   const OUTCOMES = {success:'ERFOLGREICH ABGESCHLOSSEN', partial:'TEILWEISE ERFOLGREICH',failure:'NICHT ERFOLGREICH',open:'NOCH OFFEN'};
   const DAMAGE = {no:'Keine bekannten Schäden',yes:'Schäden dokumentiert',unknown:'Noch ungeklärt'};
   // Blank form template ONLY. The online site must NEVER ship character records.
   const BASE = {
-    uid:'',alias:'',name:'',sdnId:'',role:'',hasSecretIdentity:'',affiliation:'S.D.N.',
+    uid:'',alias:'',name:'',sdnId:'',role:'',hasSecretIdentity:'',affiliation:'S.D.N.',activityStatus:'',
     height:'',weight:'',age:'',sex:'',blood:'',birthplace:'',birthday:'',player:'',discordChannelUrl:'',
     status:'draft',classCode:'—',
     appearance:{hair:'',eyes:'',build:'',skin:'',distinguishing:'',description:'',impression:''},
@@ -58,6 +59,7 @@
     return pending && isOwn ? '<span class="sdn-approval-badge is-pending">OFFEN</span>' : '';
   };
   const ownCharacters = () => characters.filter(c=>c.ownerId===backend?.userId && c.status==='approved');
+  const activityBadge = c => ACTIVITY[c?.activityStatus] ? `<span class="sdn-activity-tag ${safe(c.activityStatus)}">${ACTIVITY[c.activityStatus]}</span>` : '';
   const statusDescription = s => s==='approved'?'FREIGEGEBEN':s==='draft'?'ENTWURF · NICHT FREIGEGEBEN':'FREIGABE AUSSTEHEND';
 
   const ownerName = c => c.ownerDiscord || c.player || (c.ownerId === backend?.userId ? 'Du' : 'Discord-Spieler');
@@ -101,7 +103,7 @@
     $('directoryCards').innerHTML=filtered.length?filtered.map(c=>{
       const src=c.photo?(live?backend.imageUrl(c.photo):c.photo):'';
       const applications=hasNewRequest(c), changes=hasChangeRequest(c);
-      return `<button type="button" class="sdn-directory-card" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><span class="sdn-dir-id">SDN / ${safe(c.sdnId)}</span><strong>${safe(c.alias||'UNBENANNT')}</strong><small>${safe(ownerName(c))}</small><div class="sdn-card-approval">${cardApproval(c.status!=='approved'||applications||changes,c.status==='approved',c.ownerId===backend?.userId)}${gmMode&&applications?'<span class="sdn-card-reason">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-card-reason">ÄNDERUNG</span>':''}</div></div></button>`;
+      return `<button type="button" class="sdn-directory-card" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><span class="sdn-dir-id">SDN / ${safe(c.sdnId)}</span><strong>${safe(c.alias||'UNBENANNT')}</strong><small>${safe(ownerName(c))}</small><div class="sdn-card-approval">${cardApproval(c.status!=='approved'||applications||changes,c.status==='approved',c.ownerId===backend?.userId)}${gmMode&&applications?'<span class="sdn-card-reason">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-card-reason">ÄNDERUNG</span>':''}</div>${activityBadge(c)}</div></button>`;
     }).join(''):'<div class="sdn-directory-empty">Keine Helden mit diesen Such- und Filtereinstellungen gefunden.</div>';
     $('directoryCards').scrollTop=directoryScroll;
     $('directoryCards').querySelectorAll('[data-directory-open]').forEach(button=>button.addEventListener('click',()=>{
@@ -158,15 +160,18 @@
     }
   }
   function renderRecord(){
-    const c=picked();if(!c){$('recordBody').innerHTML='<div class="detail-empty"><h3>NO RECORD SELECTED</h3><p>Es sind noch keine Personalakten freigegeben. Du kannst eine neue Akte zur Prüfung einreichen.</p></div>'; $('editButton').hidden=true; $('approveButton').hidden=true; $('fileCrumb').textContent='—';return;}
+    const c=picked();if(!c){$('recordBody').innerHTML='<div class="detail-empty"><h3>NO RECORD SELECTED</h3><p>Es sind noch keine Personalakten freigegeben. Du kannst eine neue Akte zur Prüfung einreichen.</p></div>'; $('editButton').hidden=true; $('approveButton').hidden=true; $('activityButton').hidden=true; $('deleteCharacterButton').hidden=true; $('fileCrumb').textContent='—';return;}
     $('editButton').hidden=live&&!gmMode&&c.ownerId!==backend.userId;
     $('fileCrumb').textContent=c.sdnId;
     $('auditButton').innerHTML=`ÄNDERUNGEN ${pendingCount(c)?`<b class="pending-counter">${pendingCount(c)}</b>`:''} <span>↗</span>`;
     $('approveButton').hidden=!gmMode||live&&c.status==='draft';
+    $('activityButton').hidden=c.status!=='approved'||(live&&!gmMode&&c.ownerId!==backend.userId);
+    $('activityButton').textContent=c.activityStatus ? `STATUS: ${ACTIVITY[c.activityStatus]} ✎` : 'AKTIVITÄT SETZEN';
+    $('deleteCharacterButton').hidden=!gmMode;
     $('approveButton').textContent=c.status==='approved'?'FREIGABE ZURÜCKZIEHEN':'AKTE FREIGEBEN ✓';
     const tabs=[...TABS.filter(([id])=>id!=='secret'||(gmMode&&(!live||c._canReadSecret))),...(activeTab==='audit'?[['audit','11 ÄNDERUNGEN']]:[])];
     if(activeTab==='secret'&&!gmMode)activeTab='identity';
-    $('recordBody').innerHTML=`<article class="paper-frame"><div class="paper-mast"><div><div class="paper-wordmark">S<span>D</span>N<span>.</span></div><small>SUPERHERO DISPATCH NETWORK</small></div><div class="paper-serial">FILE NO. <b>${safe(c.sdnId)}</b><br>REF / <b>PERSONNEL</b><br>STATUS / <b>${statusText(c.status)}</b></div></div><div class="file-main"><div class="file-titleline"><div><div class="eyebrow">PERSONNEL DOSSIER / CLASSIFIED</div><h2>${safe(c.alias)}</h2><p class="file-subtitle">${show(c.name)} <span style="padding:0 8px">·</span> ${show(c.role)}</p></div><div class="classification approval-stamp ${safe(c.status)}">${statusText(c.status)}<small>${c.status==='approved'?'SDN · VERIFIZIERT':c.status==='draft'?'NICHT FREIGEGEBEN':'REVIEW REQUIRED'}</small></div></div><div class="identity-grid"><div class="portrait-container ${c.photo?'':'placeholder'}">${c.photo?`<img src="${safe(live ? backend.imageUrl(c.photo) : c.photo)}" alt="Portrait ${safe(c.alias)}"/>`:`<span>${safe((c.alias||'?')[0])}</span>`}<div class="portrait-label"><span>ID ${safe(c.sdnId)}</span><span>01 / 01</span></div></div><div class="identity-fields">${facts(c)}${/^https:\/\/discord\.com\/channels\/\d+\/\d+$/.test(c.discordChannelUrl||'')?`<a class="record-discord-link" href="${safe(c.discordChannelUrl)}" target="_blank" rel="noopener noreferrer">↗ DISCORD-CHARAKTERKANAL ÖFFNEN</a>`:''}</div></div><div class="tape"></div></div>${gmMode && live && c.portrait?.preview && c.portrait.preview!==c.portrait.publishedPreview ? (()=>{const ticket=c.proposals.find(t=>t.status==='approved' && (t.isNew||t.operations.some(op=>op.kind==='portrait' && op.after?.preview===c.portrait.preview)));return ticket?`<div class="sdn-publish-warning portrait-publication">Das neue Portrait wurde genehmigt, aber noch nicht auf GitHub Pages veröffentlicht. Das bisherige bleibt aktiv. <button type="button" data-publish-portrait="${safe(ticket._dbId)}">VERÖFFENTLICHUNG ERNEUT VERSUCHEN</button></div>`:'';})():''}<nav class="paper-tabs" aria-label="Abschnitte der Personalakte" role="tablist">${tabs.map(([id,label])=>`<button class="paper-tab ${activeTab===id?'active':''} ${id==='secret'?'secret-tab':''}" type="button" role="tab" data-tab="${id}" aria-selected="${activeTab===id}">${label}</button>`).join('')}</nav><section class="tab-content" role="tabpanel">${tabContent(c)}</section><div class="file-bottom"><span>SDN RECORDS OFFICE // ${safe(c.sdnId)}</span><span>FAN CONCEPT — UNOFFICIAL</span><b>FILE / ${safe(activeTab).toUpperCase()}</b></div></article>`;
+    $('recordBody').innerHTML=`<article class="paper-frame"><div class="paper-mast"><div><div class="paper-wordmark">S<span>D</span>N<span>.</span></div><small>SUPERHERO DISPATCH NETWORK</small></div><div class="paper-serial">FILE NO. <b>${safe(c.sdnId)}</b><br>REF / <b>PERSONNEL</b><br>STATUS / <b>${statusText(c.status)}</b></div></div><div class="file-main"><div class="file-titleline"><div><div class="eyebrow">PERSONNEL DOSSIER / CLASSIFIED</div><h2>${safe(c.alias)}</h2><p class="file-subtitle">${show(c.name)} <span style="padding:0 8px">·</span> ${show(c.role)}</p><div class="sdn-file-activity">${activityBadge(c)}</div></div><div class="classification approval-stamp ${safe(c.status)}">${statusText(c.status)}<small>${c.status==='approved'?'SDN · VERIFIZIERT':c.status==='draft'?'NICHT FREIGEGEBEN':'REVIEW REQUIRED'}</small></div></div><div class="identity-grid"><div class="portrait-container ${c.photo?'':'placeholder'}">${c.photo?`<img src="${safe(live ? backend.imageUrl(c.photo) : c.photo)}" alt="Portrait ${safe(c.alias)}"/>`:`<span>${safe((c.alias||'?')[0])}</span>`}<div class="portrait-label"><span>ID ${safe(c.sdnId)}</span><span>01 / 01</span></div></div><div class="identity-fields">${facts(c)}${/^https:\/\/discord\.com\/channels\/\d+\/\d+$/.test(c.discordChannelUrl||'')?`<a class="record-discord-link" href="${safe(c.discordChannelUrl)}" target="_blank" rel="noopener noreferrer">↗ DISCORD-CHARAKTERKANAL ÖFFNEN</a>`:''}</div></div><div class="tape"></div></div>${gmMode && live && c.portrait?.preview && c.portrait.preview!==c.portrait.publishedPreview ? (()=>{const ticket=c.proposals.find(t=>t.status==='approved' && (t.isNew||t.operations.some(op=>op.kind==='portrait' && op.after?.preview===c.portrait.preview)));return ticket?`<div class="sdn-publish-warning portrait-publication">Das neue Portrait wurde genehmigt, aber noch nicht auf GitHub Pages veröffentlicht. Das bisherige bleibt aktiv. <button type="button" data-publish-portrait="${safe(ticket._dbId)}">VERÖFFENTLICHUNG ERNEUT VERSUCHEN</button></div>`:'';})():''}<nav class="paper-tabs" aria-label="Abschnitte der Personalakte" role="tablist">${tabs.map(([id,label])=>`<button class="paper-tab ${activeTab===id?'active':''} ${id==='secret'?'secret-tab':''}" type="button" role="tab" data-tab="${id}" aria-selected="${activeTab===id}">${label}</button>`).join('')}</nav><section class="tab-content" role="tabpanel">${tabContent(c)}</section><div class="file-bottom"><span>SDN RECORDS OFFICE // ${safe(c.sdnId)}</span><span>FAN CONCEPT — UNOFFICIAL</span><b>FILE / ${safe(activeTab).toUpperCase()}</b></div></article>`;
     document.querySelectorAll('[data-publish-portrait]').forEach(button=>button.addEventListener('click',async()=>{
       try{button.disabled=true;await backend.publishPortrait(button.dataset.publishPortrait);await reloadRemote();}
       catch(e){button.disabled=false;alert('GitHub-Veröffentlichung fehlgeschlagen: '+e.message);}
@@ -254,6 +259,14 @@
       attachOpenReport(root);
     }
     // These controls are only present in the report detail view.
+    root.querySelectorAll('[data-delete-report]').forEach(b=>b.addEventListener('click',async ()=>{
+      if(!gmMode || view!=='mission-detail')return;
+      const r=currentMission(b.dataset.deleteReport);
+      if(!r)return;
+      if(!confirm(`Einsatzprotokoll „${r.title}“ (${r.id}) WIRKLICH ENDGÜLTIG LÖSCHEN?\n\nDie Verknüpfungen in allen Personalakten verschwinden. Dieser Vorgang kann nicht rückgängig gemacht werden.`))return;
+      if(live){try{b.disabled=true;await backend.deleteReport(r._dbId);reportFocus=null;await reloadRemote();navigate('missions');}catch(err){b.disabled=false;alert('Einsatzprotokoll konnte nicht gelöscht werden: '+err.message);}return;}
+      reports=reports.filter(x=>x.id!==r.id);reportFocus=null;navigate('missions');
+    }));
     root.querySelectorAll('[data-review-report]').forEach(b=>b.addEventListener('click',async ()=>{
       if(!gmMode||view!=='mission-detail')return;
       const [id,decision]=b.dataset.reviewReport.split(':');const r=currentMission(id);
@@ -265,7 +278,7 @@
   }
   function reportDetail(r){
     const participants=r.participants.map(id=>characters.find(c=>c.uid===id)).filter(Boolean);
-    return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><div class="sdn-report-detail-stamps"><div class="classification approval-stamp ${r.status==='approved'?'approved':'pending'}">${r.status==='approved'?'APPROVED':r.status==='pending'?'PENDING':'REJECTED'}<small>${r.status==='approved'?'SDN · VERIFIZIERT':r.status==='pending'?'REVIEW REQUIRED':'NICHT FREIGEGEBEN'}</small></div><div class="sdn-case-stamp ${caseState(r)==='closed'?'is-closed':'is-open'}">${caseState(r)==='closed'?'ABGESCHLOSSEN':'FALL OFFEN'}</div></div></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZBEGINN',r.startDate||r.date],['EINSATZENDE',r.endDate||'Keine Daten vorhanden'],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]],['KUNDE',r.customer||'Keine Daten vorhanden']].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${r.damageStatus==='yes'?subsection('SCHADENSBERICHT',r.damages):''}${subsection('04 / ZUSATZVERMERKE',r.notes)}${customerRatingHtml(r)}${caseState(r)==='closed'&&r.customerComment?subsection('KUNDENKOMMENTAR',r.customerComment):''}${r.rpLink&&/^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d+\/\d+\/\d+$/.test(r.rpLink)?`<a class="report-rp-link" href="${safe(r.rpLink)}" target="_blank" rel="noopener noreferrer">↗ ZUM DISCORD-RP</a>`:''}${r.requestComment?subsection('ANMERKUNG ZUM ANTRAG',r.requestComment):''}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${gmMode&&r.status==='pending'?`<div class="review-box"><strong>SPIELLEITUNG / FREIGABE</strong><p>Die Verknüpfung zur Personalakte wird erst bei Freigabe sichtbar.</p><div class="action-pair"><button data-review-report="${safe(r.id)}:approve" type="button">✓ BERICHT FREIGEBEN</button><button data-review-report="${safe(r.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}<div class="source-note">Einsatzberichte werden nach Freigabe mit den beteiligten Akten verknüpft.</div></div></article>`;
+    return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><div class="sdn-report-detail-stamps"><div class="classification approval-stamp ${r.status==='approved'?'approved':'pending'}">${r.status==='approved'?'APPROVED':r.status==='pending'?'PENDING':'REJECTED'}<small>${r.status==='approved'?'SDN · VERIFIZIERT':r.status==='pending'?'REVIEW REQUIRED':'NICHT FREIGEGEBEN'}</small></div><div class="sdn-case-stamp ${caseState(r)==='closed'?'is-closed':'is-open'}">${caseState(r)==='closed'?'ABGESCHLOSSEN':'FALL OFFEN'}</div></div></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZBEGINN',r.startDate||r.date],['EINSATZENDE',r.endDate||'Keine Daten vorhanden'],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]],['KUNDE',r.customer||'Keine Daten vorhanden']].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${r.damageStatus==='yes'?subsection('SCHADENSBERICHT',r.damages):''}${subsection('04 / ZUSATZVERMERKE',r.notes)}${customerRatingHtml(r)}${caseState(r)==='closed'&&r.customerComment?subsection('KUNDENKOMMENTAR',r.customerComment):''}${r.rpLink&&/^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d+\/\d+\/\d+$/.test(r.rpLink)?`<a class="report-rp-link" href="${safe(r.rpLink)}" target="_blank" rel="noopener noreferrer">↗ ZUM DISCORD-RP</a>`:''}${r.requestComment?subsection('ANMERKUNG ZUM ANTRAG',r.requestComment):''}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${gmMode?`<div class="sdn-danger-zone"><button type="button" class="sdn-danger-button" data-delete-report="${safe(r.id)}">EINSATZPROTOKOLL LÖSCHEN</button></div>`:''}${gmMode&&r.status==='pending'?`<div class="review-box"><strong>SPIELLEITUNG / FREIGABE</strong><p>Die Verknüpfung zur Personalakte wird erst bei Freigabe sichtbar.</p><div class="action-pair"><button data-review-report="${safe(r.id)}:approve" type="button">✓ BERICHT FREIGEBEN</button><button data-review-report="${safe(r.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}<div class="source-note">Einsatzberichte werden nach Freigabe mit den beteiligten Akten verknüpft.</div></div></article>`;
   }
   function navigate(to){
     view=to;
@@ -507,6 +520,62 @@
   function reset(){if(live)return;if(!confirm('Alle Änderungen, Bilder, Protokolle und Freigaben der Demo-Sitzung zurücksetzen?'))return;
     characters=[clone(BASE)];reports=clone(REPORTS);selectedId=BASE.uid;activeTab='identity';view='directory';gmMode=false;nextChar=1;nextMission=3;nextTicket=1;reportFocus=null;missionFilter='all';directoryScroll=0;missionScroll=0;renderGM();navigate('directory');}
   function renderGM(){$('gmToggle').textContent=live?(gmMode?'SPIELLEITUNG · ABMELDEN':hrMode?'HR · ABMELDEN':'MITGLIED · ABMELDEN'):(gmMode?'SPIELLEITUNG · DEMO':'SPIELERANSICHT');$('gmToggle').classList.toggle('is-gm',gmMode);}
+
+  function openActivityDialog(){
+    const c=picked();if(!c||c.status!=='approved')return;
+    if(live&&!gmMode&&c.ownerId!==backend.userId)return;
+    const form=$('activityForm');form.reset();
+    form.elements.activityStatus.value=c.activityStatus==='inactive'?'inactive':'active';
+    $('activityError').textContent='';
+    $('activityCommentWrap').hidden=gmMode;
+    $('activityHelp').textContent=gmMode?'Als Spielleitung kannst du den Tag direkt setzen.':'Der neue Status wird als Änderungsticket eingereicht und erscheint erst nach Freigabe.';
+    $('activitySubmit').textContent=gmMode?'STATUS SPEICHERN':'ANTRAG ABSENDEN';
+    $('activityDialog').showModal();
+  }
+  async function saveActivity(e){
+    e.preventDefault(); const c=picked(); if(!c||c.status!=='approved')return;
+    const form=$('activityForm'),newStatus=form.elements.activityStatus.value;
+    if(!['active','inactive'].includes(newStatus))return;
+    if(newStatus===c.activityStatus){$('activityError').textContent='Dieser Status ist bereits gesetzt.';return;}
+    const button=$('activitySubmit');button.disabled=true;
+    try{
+      if(gmMode){
+        if(live){await backend.setCharacterActivity(c.uid,newStatus);await reloadRemote();}
+        else{c.activityStatus=newStatus;logChange(c,'AKTIVITÄTSSTATUS DURCH SL GEÄNDERT',[ACTIVITY[newStatus]]);}
+      }else{
+        const before=c.activityStatus||'';
+        // Legacy records have no activityStatus key. Omit before instead of
+        // sending JSON null/empty string, so server-side conflict checks work.
+        const previous=Object.prototype.hasOwnProperty.call(c,'activityStatus') ? {before:c.activityStatus} : {};
+        const operations=[{kind:'field',key:'activityStatus',...previous,after:newStatus}];
+        const changes=[{label:'Aktivitätsstatus',before:ACTIVITY[before]||'Nicht gesetzt',after:ACTIVITY[newStatus],category:'normal'}];
+        if(live){await backend.submitTicket({characterId:c.uid,candidate:null,operations,changes,comment:form.elements.activityComment.value.trim()});await reloadRemote();}
+        else{c.proposals.unshift({id:'CHG-'+String(nextTicket++).padStart(4,'0'),status:'pending',isNew:false,priority:false,operations,changes,comment:form.elements.activityComment.value.trim(),time:stamp(),requestedBy:'Demo-Spieler'});}
+      }
+      $('activityDialog').close();renderDirectory();renderRecord();
+    }catch(err){$('activityError').textContent='Status konnte nicht gespeichert werden: '+err.message;}
+    finally{button.disabled=false;}
+  }
+  $('activityButton').addEventListener('click',openActivityDialog);
+  $('activityCancel').addEventListener('click',()=>$('activityDialog').close());
+  $('activityForm').addEventListener('submit',saveActivity);
+  $('deleteCharacterButton').addEventListener('click',async()=>{
+    if(!gmMode)return;
+    const c=picked();if(!c)return;
+    if(!confirm(`Personalakte „${c.alias}“ (${c.sdnId}) WIRKLICH ENDGÜLTIG LÖSCHEN?\n\nAlle Verknüpfungen in Einsatzberichten und Bekanntschaften werden entfernt. Zugehörige Tickets und Aktennotizen werden gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.`))return;
+    const button=$('deleteCharacterButton');button.disabled=true;
+    try{
+      if(live){await backend.deleteCharacter(c.uid);selectedId='';await reloadRemote();}
+      else{
+        for(const ch of characters){if(ch.uid===c.uid)continue;ch.relationships=(ch.relationships||[]).filter(rel=>rel.targetId!==c.uid);ch.proposals=ch.proposals.filter(p=>!p.operations?.some(op=>op.kind==='relation'&&op.key===c.uid));}
+        reports=reports.map(r=>({...r,participants:(r.participants||[]).filter(x=>x!==c.uid)}));
+        fileNotes=fileNotes.filter(n=>n.characterId!==c.uid);
+        characters=characters.filter(ch=>ch.uid!==c.uid);
+      }
+      navigate('directory');
+    }catch(err){alert('Personalakte konnte nicht gelöscht werden: '+err.message);}
+    finally{button.disabled=false;}
+  });
 
   $('directorySearch').addEventListener('input',()=>{directoryScroll=0;renderDirectory();});
   $('directoryFilter').addEventListener('change',e=>{directoryFilter=e.target.value;directoryScroll=0;renderDirectory();});

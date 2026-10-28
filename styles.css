@@ -554,3 +554,22 @@ html,body{max-width:100%;overflow-x:clip}
 .sdn-star-count{font:800 10px/1.4 monospace;letter-spacing:1px;color:inherit}
 .report-paper .sdn-customer-stars{color:#9e6a2c;background:#f2e5c7;border-color:#c4ae86}
 .report-paper .sdn-stars-empty{color:#b0aa9b}
+
+/* SDN v0.13 – character activity and privileged deletion */
+.sdn-activity-tag{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .7rem;border:1px solid #5d9888;color:#bce2cd;background:#183a33;font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.sdn-activity-tag.inactive{background:#3b3527;color:#d9c49d;border-color:#a38953}
+.sdn-file-activity{margin-top:14px}
+.sdn-dir-details>.sdn-activity-tag{margin-top:10px;width:max-content}
+.sdn-danger-button{border:1px solid #9c655d!important;background:rgba(112,37,31,.10)!important;color:#b95d49!important;padding:11px 15px;font-weight:800;letter-spacing:.08em;cursor:pointer}
+.sdn-danger-button:hover{background:#703324!important;color:white!important}
+.sdn-danger-button:disabled{opacity:.5;cursor:wait}
+.sdn-danger-zone{display:flex;justify-content:flex-end;margin-top:22px;padding:16px 0;border-top:1px solid rgba(115,77,68,.28)}
+.sdn-activity-dialog{max-width:min(460px,calc(100vw - 30px));width:100%;border:1px solid #657d73;background:#e9e9d8;color:#23362f;padding:28px;box-shadow:0 25px 80px #0007}
+.sdn-activity-dialog::backdrop{background:rgba(7,21,20,.85)}
+.sdn-activity-dialog form{display:flex;flex-direction:column;gap:16px}
+.sdn-activity-dialog h2{font-size:1.4rem;margin:0}
+.sdn-activity-dialog p{margin:0}
+.sdn-activity-dialog label{font-size:.85rem;display:flex;flex-direction:column;gap:8px;font-weight:700}
+.sdn-activity-dialog select,.sdn-activity-dialog textarea{font:inherit;padding:12px;border:1px solid #85978a;background:#fff;color:#20352b;width:100%;box-sizing:border-box}
+.sdn-activity-buttons{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+@media(max-width:1050px){.record-top-actions{flex-wrap:wrap}.sdn-danger-button{font-size:.76rem}}
