@@ -36,15 +36,14 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg>
         </button>
       </div>
-      <div class="rail-bottom" title="Mitgliederportal">v0.10<span>●</span></div>
+      <div class="rail-bottom" title="Mitgliederportal">v0.10.1<span>●</span></div>
     </aside>
 
     <div class="main-column">
       <header class="topbar">
         <div class="topbar-left"><span class="tiny-square"></span><span>SUPERHERO DISPATCH NETWORK</span><span class="top-separator">/</span><span class="topbar-muted">PERSONNEL DIVISION</span></div>
-        <div class="topbar-right"><span class="sync-indicator"><i></i> AUTH REQUIRED</span><span class="topbar-cut">//</span><button class="mode-toggle" id="gmToggle" type="button" title="Simulierte Ansicht der Spielleitung umschalten">SPIELERANSICHT</button><span class="session-marker">DEMO SESSION</span></div>
+        <div class="topbar-right"><span class="sync-indicator"><i></i> AUTH REQUIRED</span><span class="topbar-cut">//</span><button class="mode-toggle" id="gmToggle" type="button" title="Simulierte Ansicht der Spielleitung umschalten">SPIELERANSICHT</button><span class="session-marker" id="discordSessionName" hidden></span></div>
       </header>
-      <div class="preview-warning" role="note"><strong>GESCHÜTZTES ARCHIV</strong><span>Der Inhalt wird erst nach Discord-Anmeldung, Serverprüfung und erfolgreicher Datenbankabfrage geladen.</span><button type="button" id="privacyInfo" aria-label="Datenschutzhinweis anzeigen">?</button></div>
 
       <main class="workspace">
         <section class="workspace-intro" id="workspaceIntro">
@@ -53,7 +52,6 @@
             <h1 id="introTitle">PERSONNEL <em>ARCHIVE<span class="title-period">.</span></em></h1>
             <p id="introSubtitle">Vertrauliche Charakterakten · Registrierte SDN-Angehörige</p>
           </div>
-          <div class="intro-stamp"><span>SDN</span><small>PERSONNEL<br>RECORDS</small></div>
         </section>
 
         <section class="sdn-directory" id="heroDirectory" aria-label="Heldenverzeichnis">

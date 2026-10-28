@@ -6,7 +6,7 @@
   const configured = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.supabaseUrl || '') &&
     typeof cfg.supabasePublishableKey === 'string' &&
     !cfg.supabasePublishableKey.includes('YOUR_') && cfg.supabasePublishableKey.length > 20;
-  let client, user, memberInfo;
+  let client, user, memberInfo, currentDiscordName = '';
   const previewUrls = new Map();
   const errorMessage = e => e?.message || String(e);
   const handle = (r) => { if (r.error) throw new Error(errorMessage(r.error)); return r.data; };
@@ -101,6 +101,9 @@
     ]);
     [c, s, t, r, a, profiles, notes].forEach(handle);
     const names = new Map(profiles.data.map(row => [row.user_id, row]));
+    // Guild nickname is verified and stored server-side after Discord membership check.
+    // Fall back to OAuth metadata only if there is no verified profile yet.
+    currentDiscordName = String(names.get(user.id)?.discord_name || user.user_metadata?.full_name || user.user_metadata?.user_name || user.user_metadata?.name || '').trim().slice(0, 100);
     const displayOwner = id => names.get(id)?.discord_name || (id === user.id ? 'Du' : 'Discord-Spieler');
     const userSearchName = id => names.get(id)?.discord_username || '';
     const secrets = new Map(s.data.map(rec => [rec.character_id, rec.data]));
@@ -203,6 +206,7 @@
     proposalImageUrl: path => previewUrls.get(path) || '',
     imageUrl: path => (typeof path === 'string' && /^https:\/\/[a-z0-9-]+\.github\.io\//i.test(path) ? path : ''),
     get userId() { return user?.id || null; },
+    get discordDisplayName() { return currentDiscordName; },
     get isAdmin() { return Boolean(memberInfo?.admin); },
     get isHR() { return Boolean(memberInfo?.hr); },
   };

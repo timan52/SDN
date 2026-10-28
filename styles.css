@@ -481,3 +481,41 @@ html,body{max-width:100%;overflow-x:clip}
 @media(max-width:680px){.sdn-report-detail-stamps{justify-content:flex-start}.sdn-file-note{padding:14px}}
 
 .sdn-approval-badge.is-rejected{color:#e3a6a3;background:#422c2c}
+
+
+/* SDN v0.10.1 – Archive card consistency and quieter header */
+/* Same outline, lift, smooth transition and background as hero cards. */
+.mission-card.sdn-case-clickable {
+  background: #1b2c2c;
+  border: 1px solid #456055;
+  border-radius: 0;
+  color: #f2f1e6;
+  transition: transform .15s ease, border-color .15s ease, background .15s;
+  box-shadow: none;
+  cursor: pointer;
+}
+.mission-card.sdn-case-clickable:hover,
+.mission-card.sdn-case-clickable:focus-visible {
+  transform: translateY(-3px);
+  border-color: #eda462;
+  background: #213732;
+  outline: none;
+}
+/* Keep a visible keyboard indicator without changing the mouse hover style. */
+.mission-card.sdn-case-clickable:focus-visible {
+  outline: 2px solid #eda462;
+  outline-offset: 2px;
+}
+/* Safety: legacy arrow elements from cached markup should not appear. */
+.sdn-dir-arrow, .sdn-case-arrow, .intro-stamp, .mission-metrics, .preview-warning { display: none !important; }
+.session-marker:not([hidden]) {
+  display: inline-block;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 860px) {
+  /* The compact header reserves space for the sign-out control. */
+  .session-marker { display: none !important; }
+}

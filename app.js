@@ -88,7 +88,7 @@
     $('directoryCards').innerHTML=filtered.length?filtered.map(c=>{
       const src=c.photo?(live?backend.imageUrl(c.photo):c.photo):'';
       const applications=hasNewRequest(c), changes=hasChangeRequest(c);
-      return `<button type="button" class="sdn-directory-card" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><span class="sdn-dir-id">SDN / ${safe(c.sdnId)}</span><strong>${safe(c.alias||'UNBENANNT')}</strong><small>${safe(ownerName(c))}</small><div class="sdn-card-approval">${cardApproval(c.status!=='approved'||applications||changes,c.status==='approved',c.ownerId===backend?.userId)}${gmMode&&applications?'<span class="sdn-card-reason">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-card-reason">ÄNDERUNG</span>':''}</div></div><span class="sdn-dir-arrow">↗</span></button>`;
+      return `<button type="button" class="sdn-directory-card" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><span class="sdn-dir-id">SDN / ${safe(c.sdnId)}</span><strong>${safe(c.alias||'UNBENANNT')}</strong><small>${safe(ownerName(c))}</small><div class="sdn-card-approval">${cardApproval(c.status!=='approved'||applications||changes,c.status==='approved',c.ownerId===backend?.userId)}${gmMode&&applications?'<span class="sdn-card-reason">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-card-reason">ÄNDERUNG</span>':''}</div></div></button>`;
     }).join(''):'<div class="sdn-directory-empty">Keine Helden mit diesen Such- und Filtereinstellungen gefunden.</div>';
     $('directoryCards').scrollTop=directoryScroll;
     $('directoryCards').querySelectorAll('[data-directory-open]').forEach(button=>button.addEventListener('click',()=>{
@@ -116,7 +116,7 @@
     const heroes=reportParticipants(r);
     const closed=caseState(r)==='closed';
     const badge=cardApproval(r.status==='pending',r.status==='approved',r.submittedByMe,r.status==='rejected');
-    return `<button type="button" class="mission-card sdn-case-card sdn-case-clickable" data-open-report="${safe(r.id)}" aria-label="Einsatzprotokoll ${safe(r.title)} öffnen"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><div class="mission-card-top"><span class="file-code">${safe(r.id)}</span></div><h3>${safe(r.title)}</h3><div class="mission-card-meta">${safe(r.date)} · ${safe(r.location||'Ohne Ortsangabe')}</div><p class="sdn-case-heroes">HELDEN: ${heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten'}</p>${r.organization?`<p class="sdn-case-extra">ORGANISATION: ${safe(r.organization)}</p>`:''}${r.villain?`<p class="sdn-case-extra">GEGNER: ${safe(r.villain)}</p>`:''}${compact?'':`<p class="sdn-case-summary">${safe(r.situation)}</p>`}<div class="sdn-card-approval">${badge}</div><span class="sdn-case-arrow" aria-hidden="true">↗</span></button>`;
+    return `<button type="button" class="mission-card sdn-case-card sdn-case-clickable" data-open-report="${safe(r.id)}" aria-label="Einsatzprotokoll ${safe(r.title)} öffnen"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><div class="mission-card-top"><span class="file-code">${safe(r.id)}</span></div><h3>${safe(r.title)}</h3><div class="mission-card-meta">${safe(r.date)} · ${safe(r.location||'Ohne Ortsangabe')}</div><p class="sdn-case-heroes">HELDEN: ${heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten'}</p>${r.organization?`<p class="sdn-case-extra">ORGANISATION: ${safe(r.organization)}</p>`:''}${r.villain?`<p class="sdn-case-extra">GEGNER: ${safe(r.villain)}</p>`:''}${compact?'':`<p class="sdn-case-summary">${safe(r.situation)}</p>`}<div class="sdn-card-approval">${badge}</div></button>`;
   }
   function tabContent(c){
     switch(activeTab){
@@ -231,7 +231,7 @@
         return (missionSort==='new'?order:-order)||String(a.id).localeCompare(String(b.id));
       });
       const missionOptions=[['all','Alle Einsätze'],['mine','Meine Einsätze'],...(gmMode?[['pending','Offene Berichtsfreigaben (SL)']]:[])];
-      root.innerHTML=`<div class="mission-dashboard"><div class="mission-metrics"><div><strong>${reports.length.toString().padStart(2,'0')}</strong><span>ALLE BERICHTE</span></div><div><strong>${reports.filter(r=>caseState(r)==='open').length.toString().padStart(2,'0')}</strong><span>OFFENE FÄLLE</span></div><div><strong>${reports.filter(r=>caseState(r)==='closed').length.toString().padStart(2,'0')}</strong><span>ABGESCHLOSSEN</span></div></div><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Held, Discord, Schurke, Organisation ..." value="${safe(missionSearch)}" autocomplete="off"></label><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results"><span>${visible.length} EINSATZAKTEN</span><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="missions-catalog" id="missionCards" tabindex="0" aria-label="Scrollbares Einsatzarchiv">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div>`;
+      root.innerHTML=`<div class="mission-dashboard"><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Held, Discord, Schurke, Organisation ..." value="${safe(missionSearch)}" autocomplete="off"></label><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results"><span>${visible.length} EINSATZAKTEN</span><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="missions-catalog" id="missionCards" tabindex="0" aria-label="Scrollbares Einsatzarchiv">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div>`;
       $('newMission').addEventListener('click',openMissionDialog);
       $('missionSearch').addEventListener('input',e=>{missionSearch=e.target.value;missionScroll=0;const caret=e.target.selectionStart;renderMissions();const next=$('missionSearch');next.focus();next.setSelectionRange(caret,caret);});
       $('missionOwnership').addEventListener('change',e=>{missionOwnership=e.target.value;missionScroll=0;renderMissions();});
@@ -492,7 +492,8 @@
     renderAll();
   });
   $('auditButton').addEventListener('click',()=>{activeTab='audit';renderRecord();});$('printButton').addEventListener('click',()=>window.print());$('resetDemo').addEventListener('click',reset);if(live)$('resetDemo').hidden=true;
-  $('privacyInfo').addEventListener('click',()=>$('privacyDialog').showModal());$('closePrivacy').addEventListener('click',()=>$('privacyDialog').close());$('gotItPrivacy').addEventListener('click',()=>$('privacyDialog').close());
+  // The redundant security banner was removed from the layout.
+  $('closePrivacy').addEventListener('click',()=>$('privacyDialog').close());$('gotItPrivacy').addEventListener('click',()=>$('privacyDialog').close());
   document.querySelectorAll('.rail-button').forEach(b=>b.addEventListener('click',()=>{
     if(b.dataset.action==='roster')navigate('directory');
     else {reportFocus=null;navigate('missions');}
@@ -522,10 +523,14 @@
       gmMode=role.admin;hrMode=Boolean(role.hr);renderGM();
       await reloadRemote();navigate('directory');
       $('authGate').hidden=true;document.body.classList.remove('secure-locked');
-      $('privacyInfo').hidden=true;
-      document.querySelector('.preview-warning').innerHTML='<strong>GESCHÜTZTES ARCHIV</strong><span>Discord-Mitgliedschaft geprüft · Gespeicherte Akten und Anträge in Supabase</span>';
       document.querySelector('.sync-indicator').innerHTML='<i></i> SERVER CONNECTED';
-      document.querySelector('.session-marker').textContent='DISCORD SESSION';
+      // Display the authenticated member's verified Discord server name, never a placeholder.
+      const name = String(backend.discordDisplayName || '').trim();
+      const nameSlot = $('discordSessionName');
+      nameSlot.hidden = !name;
+      nameSlot.textContent = name;
+      nameSlot.title = name ? 'Discord: ' + name : '';
+      document.querySelector('.topbar-cut').hidden = !name;
       setInterval(async()=>{
         try{const fresh=await backend.verify();if(!fresh.member){showGate('ACCESS REVOKED','Die Mitgliedschaft wurde nicht mehr bestätigt.');return;}gmMode=fresh.admin;hrMode=Boolean(fresh.hr);renderGM();}
         catch{showGate('ACCESS PAUSED','Sicherheitsprüfung nicht möglich. Bitte Seite neu laden.');}
