@@ -2,9 +2,7 @@
 (() => {
   'use strict';
   const cfg = { ...(window.SDN_CONFIG || {}) };
-cfg.supabaseUrl = String(cfg.supabaseUrl || '')
-  .trim()
-  .replace(/\/+$/, '');
+  cfg.supabaseUrl = String(cfg.supabaseUrl || '').trim().replace(/\/+$/, '');
   const configured = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.supabaseUrl || '') &&
     typeof cfg.supabasePublishableKey === 'string' &&
     !cfg.supabasePublishableKey.includes('YOUR_') && cfg.supabasePublishableKey.length > 20;
@@ -92,14 +90,18 @@ cfg.supabaseUrl = String(cfg.supabaseUrl || '')
   }
   async function loadAll() {
     if (!memberInfo?.member) throw new Error('Mitgliedschaft erforderlich');
-    const [c, s, t, r, a] = await Promise.all([
+    const [c, s, t, r, a, profiles] = await Promise.all([
       client.from('sdn_characters').select('id,owner_id,status,data,version,created_at').order('created_at'),
       client.from('sdn_character_secrets').select('character_id,data'),
       client.from('sdn_tickets').select('id,ticket_no,character_id,requested_by,comment,operations,changes,priority,is_new,status,created_at,reviewed_at').order('created_at', { ascending: false }),
       client.from('sdn_reports').select('id,report_no,submitted_by,report,status,created_at,reviewed_at').order('created_at', { ascending: false }),
       client.from('sdn_audit').select('character_id,actor_id,action,ref,occurred_at').order('occurred_at', { ascending: false }),
+      client.from('sdn_discord_profiles').select('user_id,discord_name,discord_username'),
     ]);
-    [c, s, t, r, a].forEach(handle);
+    [c, s, t, r, a, profiles].forEach(handle);
+    const names = new Map(profiles.data.map(row => [row.user_id, row]));
+    const displayOwner = id => names.get(id)?.discord_name || (id === user.id ? 'Du' : 'Discord-Spieler');
+    const userSearchName = id => names.get(id)?.discord_username || '';
     const secrets = new Map(s.data.map(rec => [rec.character_id, rec.data]));
     const proposals = new Map();
     for (const row of t.data) {
@@ -133,7 +135,8 @@ cfg.supabaseUrl = String(cfg.supabaseUrl || '')
     }
     const chars = c.data.map(row => ({
       ...row.data,
-      uid: row.id, ownerId: row.owner_id, status: row.status,
+      uid: row.id, ownerId: row.owner_id, status: row.status, createdAt: row.created_at,
+      ownerDiscord: displayOwner(row.owner_id), ownerDiscordUsername: userSearchName(row.owner_id),
       secret: secrets.get(row.id) || { hasCover: 'unknown', coverName: '', coverDetails: '' },
       _canReadSecret: secrets.has(row.id),
       proposals: proposals.get(row.id) || [], changeLog: audits.get(row.id) || [],
@@ -141,7 +144,7 @@ cfg.supabaseUrl = String(cfg.supabaseUrl || '')
 
     const reports = r.data.map(row => ({
       ...row.report, _dbId: row.id, id: asCode('OPS', row.report_no),
-      status: row.status, submitted: row.submitted_by === user.id ? 'Du' : 'Servermitglied',
+      status: row.status, submittedByMe: row.submitted_by === user.id, submitted: displayOwner(row.submitted_by), createdAt: row.created_at,
       reviewed: row.reviewed_at ? new Date(row.reviewed_at).toLocaleString('de-DE') : '',
     }));
     return { characters: chars, reports };

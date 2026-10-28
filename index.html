@@ -56,6 +56,16 @@
           <div class="intro-stamp"><span>SDN</span><small>PERSONNEL<br>RECORDS</small></div>
         </section>
 
+        <section class="sdn-directory" id="heroDirectory" aria-label="Heldenverzeichnis">
+          <div class="sdn-directory-head"><div><span class="sdn-desk-tag">PERSONNEL DIRECTORY / HERO ROSTER</span><h2>HELDENÜBERSICHT<span>.</span></h2><p>Alle freigegebenen Helden und deine eigenen Anträge. Die Spielleitung sieht zusätzlich offene Freigaben.</p></div><button class="operation-add" id="directoryAdd" type="button">＋ NEUEN HELDEN ERSTELLEN</button></div>
+          <div class="sdn-directory-filters">
+            <label class="sdn-search-label">SUCHE<input type="search" id="directorySearch" autocomplete="off" placeholder="Heldenname, Discord-Name, bürgerlicher Name, ID ..."></label>
+            <label>ANZEIGE<select id="directoryFilter"><option value="all">Alle Helden</option><option value="mine">Meine Helden</option></select></label>
+            <label>SORTIEREN<select id="directorySort"><option value="new">Neueste zuerst</option><option value="old">Älteste zuerst</option></select></label>
+          </div>
+          <div class="sdn-directory-results"><span id="directoryCount">0 AKTEN</span><span>SDN / GESCHÜTZTES VERZEICHNIS</span></div>
+          <div class="sdn-directory-grid" id="directoryCards" aria-live="polite"></div>
+        </section>
         <div class="work-grid" id="personnelView">
           <section class="roster-panel" aria-label="Personalliste">
             <div class="panel-heading"><span>01 / VERZEICHNIS</span><span id="rosterCount">001 FILE</span></div>
@@ -67,7 +77,7 @@
           </section>
 
           <section class="record-panel" id="recordPanel" aria-label="Personalakte">
-            <div class="record-topbar"><div class="record-crumb">AKTENREGISTER <span>/</span> <strong id="fileCrumb">—</strong></div><div class="record-top-actions"><button class="text-button" id="auditButton" type="button">ÄNDERUNGEN <span>↗</span></button><button class="text-button" id="printButton" type="button">DRUCKEN <span>↗</span></button><button class="outline-button" id="approveButton" type="button" hidden>AKTE FREIGEBEN ✓</button><button class="outline-button" id="editButton" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4-.7L19.3 8a2.1 2.1 0 0 0-3-3L5 16.3 4 20Z"/></svg> DATEN BEARBEITEN</button></div></div>
+            <div class="record-topbar"><div class="record-crumb"><button type="button" class="sdn-back-button" id="backDirectory">← ALLE HELDEN</button> AKTENREGISTER <span>/</span> <strong id="fileCrumb">—</strong></div><div class="record-top-actions"><button class="text-button" id="auditButton" type="button">ÄNDERUNGEN <span>↗</span></button><button class="text-button" id="printButton" type="button">DRUCKEN <span>↗</span></button><button class="outline-button" id="approveButton" type="button" hidden>AKTE FREIGEBEN ✓</button><button class="outline-button" id="editButton" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4-.7L19.3 8a2.1 2.1 0 0 0-3-3L5 16.3 4 20Z"/></svg> DATEN BEARBEITEN</button></div></div>
             <div id="recordBody"></div>
           </section>
         </div>
@@ -97,6 +107,8 @@
           <label class="span2">EINSATZBEZEICHNUNG *<input name="title" maxlength="100" required placeholder="z. B. Zwischenfall am Hafen" /></label>
           <label>EINSATZDATUM *<input name="date" type="date" required /></label><label>EINSATZORT<input name="location" maxlength="110" placeholder="Ort / Einsatzgebiet" /></label>
           <label class="span2">BETEILIGTE HELDEN *<span class="field-hint">Mindestens einen bestehenden Charakter auswählen.</span><div class="participant-checks" id="participantChecks"></div></label>
+          <label>ORGANISATION<input name="organization" maxlength="130" placeholder="z. B. SDN / Organisation" /></label><label>GEGNER / SCHURKE<input name="villain" maxlength="130" placeholder="Name oder Alias" /></label>
+          <label class="span2">FALLSTATUS *<select name="caseStatus" required><option value="open">OFFEN / LAUFENDER FALL</option><option value="closed">ABGESCHLOSSEN</option></select></label>
           <label class="span2">AUSGANGSLAGE *<textarea name="situation" rows="3" required maxlength="3000" placeholder="Was war bekannt? Wie kam es zur Alarmierung?"></textarea></label>
           <label class="span2">EINSATZVERLAUF *<textarea name="events" rows="5" required maxlength="5000" placeholder="Was ist in welcher Reihenfolge geschehen?"></textarea></label>
           <label>ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option><option value="open">Noch offen</option></select></label>

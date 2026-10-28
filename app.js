@@ -24,7 +24,8 @@
     warning:'',changeLog:[],proposals:[]
   };
   const REPORTS = [];
-  let characters=[],reports=[],selectedId='',activeTab='identity',view='personnel',filter='all',gmMode=false;
+  let characters=[],reports=[],selectedId='',activeTab='identity',view='directory',filter='all',gmMode=false;
+  let directoryFilter='all', directorySort='new', missionOwnership='all', missionCase='all', missionSort='new', missionSearch='';
   let editTarget=null,editNew=false,nextChar=1,nextMission=1,nextTicket=1,reportFocus=null,missionFilter='all';
   let stagedPortrait=null, portraitPreviewUrl=null;
   const backend=window.SDNBackend;
@@ -32,7 +33,7 @@
   const picked = () => characters.find(c=>c.uid===selectedId) || characters[0];
   const total = c => STAT_KEYS.reduce((v,[k])=>v+Number(c.stats[k]||0),0);
   const stamp = () => new Date().toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'});
-  const editableKeys = ['name','alias','sdnId','role','height','weight','age','sex','blood','birthplace','birthday','player','discordChannelUrl','classCode','hair','eyes','build','skin','distinguishing','description','impression','character','motivation','behavior','assessment','background','criminalRecord','formerAffiliations','medicalConditions','medicalInjuries','medicalTreatments','medicalAllergies','medicalNotes','personalNotes','hasCover','coverName','coverDetails','powerName','received','origin','powerDescription','weaknesses'];
+  const editableKeys = ['name','alias','role','height','weight','age','sex','blood','birthplace','birthday','player','discordChannelUrl','classCode','hair','eyes','build','skin','distinguishing','description','impression','character','motivation','behavior','assessment','background','criminalRecord','formerAffiliations','medicalConditions','medicalInjuries','medicalTreatments','medicalAllergies','medicalNotes','personalNotes','hasCover','coverName','coverDetails','powerName','received','origin','powerDescription','weaknesses'];
   const fieldNames = {name:'Name',alias:'Alias',sdnId:'ID',role:'Rolle',height:'Größe',weight:'Gewicht',age:'Alter',sex:'Geschlecht',blood:'Blutgruppe',birthplace:'Geburtsort',birthday:'Geburtstag',player:'Spieler',discordChannelUrl:'Discord-Charakterkanal (URL)',classCode:'Klasse',hair:'Haarfarbe',eyes:'Augenfarbe',build:'Statur',skin:'Teint',distinguishing:'Merkmale',description:'Beschreibung des Aussehens',impression:'Fremdwahrnehmung',character:'Persönlichkeit',motivation:'Motivation',behavior:'Sozialverhalten',assessment:'Psychologisches Gutachten',background:'Hintergrundgeschichte',criminalRecord:'Strafregister',formerAffiliations:'Ehemalige Zugehörigkeiten',medicalConditions:'Vorerkrankungen / Dauerhafte Beschwerden',medicalInjuries:'Verletzungen / Medizinische Vorfälle',medicalTreatments:'Behandlungen / Operationen',medicalAllergies:'Allergien / Medizinische Einschränkungen',medicalNotes:'Ärztliche Vermerke',personalNotes:'Personalnotizen',hasCover:'Tarnidentität?',coverName:'Tarnname',coverDetails:'Tarnidentität / Details',powerName:'Fähigkeitsname',received:'Zeitpunkt',origin:'Ursprung',powerDescription:'Fähigkeitsbeschreibung',weaknesses:'Schwächen'};
   const sensitiveKeys = new Set(['classCode','powerName','received','origin','powerDescription','weaknesses','powers','stats']);
   const secretKeys = new Set(['hasCover','coverName','coverDetails']);
@@ -48,6 +49,44 @@
   const statusText = s => s==='approved'?'APPROVED':s==='draft'?'DRAFT':'PENDING';
   const statusDescription = s => s==='approved'?'FREIGEGEBEN':s==='draft'?'ENTWURF · NICHT FREIGEGEBEN':'FREIGABE AUSSTEHEND';
 
+  const ownerName = c => c.ownerDiscord || c.player || (c.ownerId === backend?.userId ? 'Du' : 'Discord-Spieler');
+  const caseState = r => r.caseStatus === 'closed' || (!r.caseStatus && r.outcome !== 'open') ? 'closed' : 'open';
+  const reportParticipants = r => (r.participants || []).map(id=>characters.find(c=>c.uid===id)).filter(Boolean);
+  const hasNewRequest = c => (c.proposals || []).some(t=>t.status==='pending' && t.isNew);
+  const hasChangeRequest = c => (c.proposals || []).some(t=>t.status==='pending' && !t.isNew);
+  function renderDirectory(){
+    const filterSelect=$('directoryFilter'), search=$('directorySearch');
+    if(!filterSelect||!search)return;
+    const adminFilters=[['changes','Offene Änderungen (SL)'],['applications','Neue Heldenanträge (SL)']];
+    for(const [value,label] of adminFilters){
+      let option=filterSelect.querySelector(`option[value="${value}"]`);
+      if(gmMode&&!option){option=new Option(label,value);filterSelect.add(option);}
+      if(!gmMode&&option)option.remove();
+    }
+    if(!gmMode&&['changes','applications'].includes(directoryFilter))directoryFilter='all';
+    filterSelect.value=directoryFilter;
+    const q=search.value.toLocaleLowerCase('de').trim();
+    const filtered=characters.filter(c=>{
+      const visible=(c.status==='approved'||gmMode||c.ownerId===backend?.userId);
+      const scope=directoryFilter==='mine' ? (c.ownerId===backend?.userId) :
+          directoryFilter==='changes' ? hasChangeRequest(c) :
+          directoryFilter==='applications' ? hasNewRequest(c) : (c.status==='approved'||gmMode||c.ownerId===backend?.userId);
+      const searchable=[c.alias,c.name,c.sdnId,c.ownerDiscord,c.ownerDiscordUsername,c.player,c.role].join(' ').toLocaleLowerCase('de');
+      return visible && scope && searchable.includes(q);
+    }).sort((a,b)=>{
+      const order=Number(new Date(b.createdAt||0))-Number(new Date(a.createdAt||0));
+      return (directorySort==='new'?order:-order) || String(a.alias).localeCompare(String(b.alias),'de');
+    });
+    $('directoryCount').textContent=filtered.length+(filtered.length===1?' AKTE':' AKTEN');
+    $('directoryCards').innerHTML=filtered.length?filtered.map(c=>{
+      const src=c.photo?(live?backend.imageUrl(c.photo):c.photo):'';
+      const applications=hasNewRequest(c), changes=hasChangeRequest(c);
+      return `<button type="button" class="sdn-directory-card" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><span class="sdn-dir-id">SDN / ${safe(c.sdnId)}</span><strong>${safe(c.alias||'UNBENANNT')}</strong><small>${safe(ownerName(c))}</small><div class="sdn-dir-stamps"><span class="sdn-dir-state ${safe(c.status)}">${statusText(c.status)}</span>${gmMode&&applications?'<span class="sdn-dir-warning">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-dir-warning">ÄNDERUNGEN OFFEN</span>':''}</div></div><span class="sdn-dir-arrow">↗</span></button>`;
+    }).join(''):'<div class="sdn-directory-empty">Keine Helden mit diesen Such- und Filtereinstellungen gefunden.</div>';
+    $('directoryCards').querySelectorAll('[data-directory-open]').forEach(button=>button.addEventListener('click',()=>{
+      selectedId=button.dataset.directoryOpen;activeTab='identity';navigate('personnel');
+    }));
+  }
   function renderRoster(){
     const q=$('searchInput').value.toLocaleLowerCase('de').trim();
     const filtered=characters.filter(c=>(filter==='all'||(filter==='pending'&&c.status!=='approved'&&c.status!=='draft')||c.status===filter)&&[c.alias,c.name,c.sdnId,c.role].join(' ').toLocaleLowerCase('de').includes(q));
@@ -71,7 +110,11 @@
   function statBars(c){return `<div class="stat-box"><div class="stat-box-header">ATTRIBUTE EVALUATION <span>${total(c)} / 27 PTS</span></div>${STAT_KEYS.map(([k,n])=>`<div class="stat-row"><span>${n}</span><div><b style="width:${Number(c.stats[k])*10}%"></b></div><strong>${safe(c.stats[k])}/10</strong></div>`).join('')}<div class="stat-foot">MAX. 10 PUNKTE JE ATTRIBUT · MAX. 27 GESAMTPUNKTE<br>Spieleränderungen am Profil müssen genehmigt werden.</div></div>`;}
   function recordPair(label,value){return `<div class="small-record"><small>${safe(label)}</small><strong>${show(value)}</strong></div>`;}
   function subsection(label,value){return `<div class="dossier-section"><div class="tab-heading">${safe(label)}</div>${paragraph(value)}</div>`;}
-  function missionCard(r,compact=false){return `<div class="mission-card"><div class="mission-card-top"><span class="file-code">${safe(r.id)}</span><span class="report-status ${r.status}">${r.status==='approved'?'FREIGEGEBEN':r.status==='pending'?'PRÜFUNG AUSSTEHEND':'ABGELEHNT'}</span></div><h3>${safe(r.title)}</h3><div class="mission-card-meta">${safe(r.date)} &nbsp;·&nbsp; ${safe(r.location||'Ohne Ortsangabe')}</div>${compact?'':`<p>${safe(r.situation)}</p>`}<button type="button" data-open-report="${safe(r.id)}" class="mini-action">BERICHT ÖFFNEN ↗</button></div>`;}
+  function missionCard(r,compact=false){
+    const heroes=reportParticipants(r);
+    const closed=caseState(r)==='closed';
+    return `<div class="mission-card sdn-case-card"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><div class="mission-card-top"><span class="file-code">${safe(r.id)}</span><span class="report-status ${safe(r.status)}">${r.status==='approved'?'FREIGEGEBEN':r.status==='pending'?'ZUR FREIGABE':'ABGELEHNT'}</span></div><h3>${safe(r.title)}</h3><div class="mission-card-meta">${safe(r.date)} · ${safe(r.location||'Ohne Ortsangabe')}</div><p class="sdn-case-heroes">HELDEN: ${heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten'}</p>${r.organization?`<p class="sdn-case-extra">ORGANISATION: ${safe(r.organization)}</p>`:''}${r.villain?`<p class="sdn-case-extra">GEGNER: ${safe(r.villain)}</p>`:''}${compact?'':`<p class="sdn-case-summary">${safe(r.situation)}</p>`}<button type="button" data-open-report="${safe(r.id)}" class="mini-action">EINSATZAKTE ÖFFNEN ↗</button></div>`;
+  }
   function tabContent(c){
     switch(activeTab){
       case 'identity':return `<div class="tab-heading">ERSCHEINUNGSBILD / VISUAL IDENTIFICATION</div><div class="appearance-facts">${[['HAARFARBE',c.appearance.hair],['AUGENFARBE',c.appearance.eyes],['STATUR',c.appearance.build],['HAUT / TEINT',c.appearance.skin],['BESONDERE MERKMALE',c.appearance.distinguishing],['GRÖSSE',c.height]].map(([k,v])=>recordPair(k,v)).join('')}</div>${subsection('AUSSEHEN / BESCHREIBUNG',c.appearance.description)}${subsection('AUSSENWIRKUNG / WAHRNEHMUNG',c.appearance.impression)}<div class="source-note">Aussehensangaben und Fremdwahrnehmung können als freie Texte ergänzt werden.</div>`;
@@ -138,11 +181,27 @@
   }
   function attachOpenReport(root){root.querySelectorAll('[data-open-report]').forEach(b=>b.addEventListener('click',()=>{reportFocus=b.dataset.openReport;navigate('missions');}));}
   function renderMissions(){
-    const visible=reports.filter(r=>missionFilter==='all'||r.status===missionFilter);
+    if(!gmMode&&missionOwnership==='pending')missionOwnership='all';
+    const q=missionSearch.toLocaleLowerCase('de').trim();
+    const visible=reports.filter(r=>{
+      const heroes=reportParticipants(r);
+      const mine=r.submittedByMe || heroes.some(c=>c.ownerId===backend?.userId);
+      const scope=missionOwnership==='mine'?mine:missionOwnership==='pending'?gmMode&&r.status==='pending':true;
+      const state=missionCase==='all'||caseState(r)===missionCase;
+      const text=[r.title,r.id,r.organization,r.villain,r.location,r.submitted,...heroes.flatMap(c=>[c.alias,c.name,c.ownerDiscord,c.ownerDiscordUsername])].join(' ').toLocaleLowerCase('de');
+      return scope&&state&&text.includes(q);
+    }).sort((a,b)=>{
+      const order=Number(new Date(b.createdAt||b.date||0))-Number(new Date(a.createdAt||a.date||0));
+      return (missionSort==='new'?order:-order)||String(a.id).localeCompare(String(b.id));
+    });
     const selected=reportFocus&&currentMission(reportFocus);
-    $('missionsView').innerHTML=`<div class="operations-header"><div><div class="eyebrow">OPERATIONS DIVISION / CASE FILES</div><h2>FIELD REPORTS<span>.</span></h2><p>Einsatzakten mit zentraler Freigabe und Verknüpfung zu Personalakten.</p></div><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="mission-dashboard"><div class="mission-metrics"><div><strong>${reports.length.toString().padStart(2,'0')}</strong><span>ALLE EINSÄTZE</span></div><div><strong>${reports.filter(r=>r.status==='pending').length.toString().padStart(2,'0')}</strong><span>IN PRÜFUNG</span></div><div><strong>${reports.filter(r=>r.status==='approved').length.toString().padStart(2,'0')}</strong><span>FREIGEGEBEN</span></div></div><div class="mission-filter-row">${[['all','ALLE'],['approved','FREIGEGEBEN'],['pending','AUSSTEHEND'],['rejected','ABGELEHNT']].map(([v,l])=>`<button type="button" data-mission-filter="${v}" class="filter-chip ${missionFilter===v?'selected':''}">${l}</button>`).join('')}</div><div class="missions-catalog">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzprotokolle mit diesem Status.</div>'}</div></div><div id="missionDetail" class="mission-detail">${selected?reportDetail(selected):'<div class="detail-empty"><div>◈</div><h3>EINSATZAKTE AUSWÄHLEN</h3><p>Öffne einen Bericht aus dem Verzeichnis, um Ausgangslage, Ablauf, Schäden und Abschluss einzusehen.</p></div>'}</div>`;
+    const missionOptions=[['all','Alle Einsätze'],['mine','Meine Einsätze'],...(gmMode?[['pending','Offene Berichtsfreigaben (SL)']]:[])];
+    $('missionsView').innerHTML=`<div class="operations-header"><div><div class="eyebrow">OPERATIONS DIVISION / CASE FILES</div><h2>EINSATZARCHIV<span>.</span></h2><p>Durchsuchbare Einsatzakten mit Fallstatus, beteiligten Helden und SL-Freigabe.</p></div><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="mission-dashboard"><div class="mission-metrics"><div><strong>${reports.length.toString().padStart(2,'0')}</strong><span>ALLE BERICHTE</span></div><div><strong>${reports.filter(r=>caseState(r)==='open').length.toString().padStart(2,'0')}</strong><span>OFFENE FÄLLE</span></div><div><strong>${reports.filter(r=>caseState(r)==='closed').length.toString().padStart(2,'0')}</strong><span>ABGESCHLOSSEN</span></div></div><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Held, Discord, Schurke, Organisation ..." value="${safe(missionSearch)}" autocomplete="off"></label><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results">${visible.length} EINSATZAKTEN</div><div class="missions-catalog">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div><div id="missionDetail" class="mission-detail">${selected?reportDetail(selected):'<div class="detail-empty"><div>◈</div><h3>EINSATZAKTE AUSWÄHLEN</h3><p>Öffne einen Bericht aus dem Verzeichnis, um Ausgangslage, Ablauf, Schäden und Abschluss einzusehen.</p></div>'}</div>`;
     $('newMission').addEventListener('click',openMissionDialog);
-    document.querySelectorAll('[data-mission-filter]').forEach(b=>b.addEventListener('click',()=>{missionFilter=b.dataset.missionFilter;renderMissions();}));
+    $('missionSearch').addEventListener('input',e=>{missionSearch=e.target.value;const caret=e.target.selectionStart;renderMissions();const next=$('missionSearch');next.focus();next.setSelectionRange(caret,caret);});
+    $('missionOwnership').addEventListener('change',e=>{missionOwnership=e.target.value;renderMissions();});
+    $('missionCase').addEventListener('change',e=>{missionCase=e.target.value;renderMissions();});
+    $('missionSort').addEventListener('change',e=>{missionSort=e.target.value;renderMissions();});
     attachOpenReport($('missionsView'));
     document.querySelectorAll('[data-review-report]').forEach(b=>b.addEventListener('click',async ()=>{
       if(!gmMode)return;const [id,decision]=b.dataset.reviewReport.split(':');const r=currentMission(id);if(!r||r.status!=='pending')return;
@@ -153,27 +212,31 @@
   }
   function reportDetail(r){
     const participants=r.participants.map(id=>characters.find(c=>c.uid===id)).filter(Boolean);
-    return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><span class="report-status ${r.status}">${r.status==='approved'?'FREIGEGEBEN':r.status==='pending'?'PRÜFUNG AUSSTEHEND':'ABGELEHNT'}</span></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZDATUM',r.date],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]]].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${paragraph(r.damages)}${subsection('04 / ZUSATZVERMERKE',r.notes)}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${gmMode&&r.status==='pending'?`<div class="review-box"><strong>SPIELLEITUNG / DEMO-FREIGABE</strong><p>Die Verknüpfung zur Personalakte wird erst bei Freigabe sichtbar.</p><div class="action-pair"><button data-review-report="${safe(r.id)}:approve" type="button">✓ BERICHT FREIGEBEN</button><button data-review-report="${safe(r.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}<div class="source-note">Einsatzberichte werden nach Freigabe mit den beteiligten Akten verknüpft.</div></div></article>`;
+    return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><div class="sdn-case-stamp ${caseState(r)==='closed'?'is-closed':'is-open'}">${caseState(r)==='closed'?'ABGESCHLOSSEN':'FALL OFFEN'}</div></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZDATUM',r.date],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]],['ORGANISATION',r.organization||'—'],['GEGNER / SCHURKE',r.villain||'—']].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${paragraph(r.damages)}${subsection('04 / ZUSATZVERMERKE',r.notes)}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${gmMode&&r.status==='pending'?`<div class="review-box"><strong>SPIELLEITUNG / DEMO-FREIGABE</strong><p>Die Verknüpfung zur Personalakte wird erst bei Freigabe sichtbar.</p><div class="action-pair"><button data-review-report="${safe(r.id)}:approve" type="button">✓ BERICHT FREIGEBEN</button><button data-review-report="${safe(r.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}<div class="source-note">Einsatzberichte werden nach Freigabe mit den beteiligten Akten verknüpft.</div></div></article>`;
   }
   function navigate(to){
     view=to;
-    $('personnelView').hidden=to!=='personnel';$('missionsView').hidden=to!=='missions';
-    $('introTitle').innerHTML=to==='personnel'?'PERSONNEL <em>ARCHIVE<span class="title-period">.</span></em>':'OPERATIONS <em>ARCHIVE<span class="title-period">.</span></em>';
-    $('introCode').textContent=to==='personnel'?'// 00. PERSONNEL':'// 01. OPERATIONS';
-    $('introSubtitle').textContent=to==='personnel'?'Vertrauliche Charakterakten · Registrierte SDN-Angehörige':'Einsatzprotokolle · Freigaben · Dokumentierte Einsätze';
-    document.querySelectorAll('.rail-button').forEach(b=>b.classList.toggle('active',b.dataset.action===(to==='personnel'?'roster':'missions')));
-    if(to==='missions')renderMissions();else renderAll();
+    $('heroDirectory').hidden=to!=='directory';
+    $('personnelView').hidden=to!=='personnel';
+    $('missionsView').hidden=to!=='missions';
+    const directory=to==='directory', personnel=to==='personnel', mission=to==='missions';
+    $('introTitle').innerHTML=mission?'OPERATIONS <em>ARCHIVE<span class="title-period">.</span></em>':directory?'HERO <em>DIRECTORY<span class="title-period">.</span></em>':'PERSONNEL <em>ARCHIVE<span class="title-period">.</span></em>';
+    $('introCode').textContent=mission?'// 02. OPERATIONS':directory?'// 00. HERO DIRECTORY':'// 01. PERSONNEL FILE';
+    $('introSubtitle').textContent=mission?'Einsatzprotokolle · Fallstatus · Dokumentierte Einsätze':directory?'Heldenverzeichnis · Alle & meine Charaktere · SDN-Personalakten':'Vertrauliche Charakterakte · Registrierte SDN-Angehörige';
+    document.querySelectorAll('.rail-button').forEach(b=>b.classList.toggle('active',b.dataset.action===(mission?'missions':'roster')));
+    if(mission)renderMissions();else if(personnel)renderAll();else renderDirectory();
+    if(!mission)window.scrollTo({top:0,behavior:'instant'});
   }
-  function renderAll(){renderRoster();renderRecord();}
+  function renderAll(){renderRoster();renderRecord();renderDirectory();}
   const formInput=(key,label,opts={})=>{const v=editNew?'':fieldValue(editTarget,key);const max=opts.max||255;return `<label class="${opts.wide?'span2':''}">${safe(label)}${opts.hint?`<span class="field-hint">${safe(opts.hint)}</span>`:''}${opts.area?`<textarea name="${key}" maxlength="${max}" rows="${opts.rows||3}">${safe(v)}</textarea>`:`<input name="${key}" maxlength="${max}" value="${safe(v)}" />`}</label>`;};
   const selectField=(key,label,values)=>`<label>${safe(label)}<select name="${key}">${values.map(([value,title])=>`<option value="${safe(value)}" ${String(fieldValue(editTarget,key))===String(value)?'selected':''}>${safe(title)}</option>`).join('')}</select></label>`;
   const section=(title,contents,open=false)=>`<details class="editor-group" ${open?'open':''}><summary>${safe(title)} <span>＋</span></summary><div class="form-grid">${contents}</div></details>`;
   function openEdit(isNew=false,focusSection='',quick={}){
     if(live&&!isNew&&!gmMode&&picked()?.ownerId!==backend.userId){alert('Nur eigene Akten dürfen bearbeitet werden.');return;}
     editNew=isNew;stagedPortrait=null;if(portraitPreviewUrl){URL.revokeObjectURL(portraitPreviewUrl);portraitPreviewUrl=null;}
-    editTarget=isNew?clone({...BASE,uid:'draft-'+nextChar,alias:'',name:'',sdnId:'DRAFT-'+String(nextChar).padStart(3,'0'),role:'',status:'draft',photo:'',height:'',weight:'',age:'',sex:'',blood:'',birthplace:'',birthday:'',player:'',discordChannelUrl:'',powerName:'',received:'',origin:'',powerDescription:'',powers:[],weaknesses:'',stats:{combat:1,vigor:1,mobility:1,charisma:1,intellect:1},portrait:null,warning:'',changeLog:[],proposals:[]}):picked();
+    editTarget=isNew?clone({...BASE,uid:'draft-'+nextChar,alias:'',name:'',sdnId:'WIRD VERGEBEN',role:'',status:'draft',photo:'',height:'',weight:'',age:'',sex:'',blood:'',birthplace:'',birthday:'',player:'',discordChannelUrl:'',powerName:'',received:'',origin:'',powerDescription:'',powers:[],weaknesses:'',stats:{combat:1,vigor:1,mobility:1,charisma:1,intellect:1},portrait:null,warning:'',changeLog:[],proposals:[]}):picked();
     $('dialogTitle').textContent=isNew?'NEUE PERSONALAKTE':'AKTE BEARBEITEN';
-    const nameFields=['name','alias','sdnId','role','age','height','weight','blood','birthplace','birthday','sex','player','discordChannelUrl'].map(key=>formInput(key,fieldNames[key],{max:150})).join('');
+    const nameFields='<div class="span2 sdn-generated-id">SDN-ID <strong>'+ (isNew?'WIRD AUTOMATISCH ZUFÄLLIG VERGEBEN':safe(editTarget.sdnId)) +'</strong></div>'+['name','alias','role','age','height','weight','blood','birthplace','birthday','sex','player','discordChannelUrl'].map(key=>formInput(key,fieldNames[key],{max:150})).join('');
     const appearance=['hair','eyes','build','skin','distinguishing'].map(k=>formInput(k,fieldNames[k])).join('')+['description','impression'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:2500})).join('');
     const classSelect=selectField('classCode','FÄHIGKEITSKLASSE',['—','A','B','C','D','E'].map(x=>[x,x]));
     const abilities=classSelect+['powerName','origin','received'].map(k=>formInput(k,fieldNames[k])).join('')+formInput('powerDescription','FÄHIGKEITEN / BESCHREIBUNG',{area:true,wide:true,max:5000})+formInput('weaknesses','BEKANNTE SCHWÄCHEN',{area:true,wide:true,max:5000})+`<label class="span2">EINZELFÄHIGKEITEN (JE ZEILE „NAME | BESCHREIBUNG“)<textarea name="powersText" rows="5" maxlength="5000">${safe(editTarget.powers.map(p=>p.title+' | '+p.text).join('\n'))}</textarea></label>`;
@@ -340,12 +403,16 @@
 
     function openMissionDialog(){
     const f=$('missionForm');f.reset();f.elements.date.value=new Date().toISOString().slice(0,10);
+    f.elements.outcome.value='open';
+    f.elements.caseStatus.onchange=()=>{f.elements.outcome.value=f.elements.caseStatus.value==='open'?'open':'success';};
     $('participantChecks').innerHTML=characters.filter(c=>!live||c.status==='approved').map(c=>`<label class="participant-option"><input type="checkbox" name="participant" value="${safe(c.uid)}"><span>${safe(c.alias)} <small>#${safe(c.sdnId)}</small></span></label>`).join('');
     $('missionError').textContent='';$('missionDialog').showModal();
   }
   function saveMission(evt){
     evt.preventDefault();const f=$('missionForm');$('missionError').textContent='';const data={};
-    for(const key of ['title','date','location','situation','events','outcome','damageStatus','damages','notes'])data[key]=f.elements[key].value.trim();
+    for(const key of ['title','date','location','organization','villain','caseStatus','situation','events','outcome','damageStatus','damages','notes'])data[key]=f.elements[key].value.trim();
+    if(data.caseStatus==='open')data.outcome='open';
+    else if(data.outcome==='open'){ $('missionError').textContent='Abgeschlossene Fälle benötigen ein abschließendes Ergebnis.';return; }
     const participants=[...$('participantChecks').querySelectorAll('input:checked')].map(el=>el.value);
     if(!data.title||!data.date||!data.situation||!data.events||!participants.length){$('missionError').textContent='Bitte Einsatzname, Datum, Ausgangslage, Verlauf und mindestens einen Teilnehmer angeben.';return;}
     if(live){backend.submitReport({...data,participants}).then(async id=>{reportFocus=id;missionFilter='all';$('missionDialog').close();await reloadRemote();navigate('missions');}).catch(e=>{$('missionError').textContent='Bericht nicht gespeichert: '+e.message;});return;}
@@ -357,6 +424,11 @@
     characters=[clone(BASE)];reports=clone(REPORTS);selectedId=BASE.uid;activeTab='identity';view='personnel';filter='all';gmMode=false;nextChar=1;nextMission=3;nextTicket=1;reportFocus=null;missionFilter='all';$('searchInput').value='';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('selected',b.dataset.filter==='all'));renderGM();navigate('personnel');}
   function renderGM(){$('gmToggle').textContent=live?(gmMode?'SPIELLEITUNG · ABMELDEN':'MITGLIED · ABMELDEN'):(gmMode?'SPIELLEITUNG · DEMO':'SPIELERANSICHT');$('gmToggle').classList.toggle('is-gm',gmMode);}
 
+  $('directorySearch').addEventListener('input',renderDirectory);
+  $('directoryFilter').addEventListener('change',e=>{directoryFilter=e.target.value;renderDirectory();});
+  $('directorySort').addEventListener('change',e=>{directorySort=e.target.value;renderDirectory();});
+  $('directoryAdd').addEventListener('click',()=>openEdit(true));
+  $('backDirectory').addEventListener('click',()=>navigate('directory'));
   $('searchInput').addEventListener('input',renderRoster);
   document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('selected',x===b));renderRoster();}));
   $('editButton').addEventListener('click',()=>openEdit());$('addNew').addEventListener('click',()=>openEdit(true));$('editForm').addEventListener('submit',saveEdit);
@@ -376,13 +448,13 @@
   });
   $('auditButton').addEventListener('click',()=>{activeTab='audit';renderRecord();});$('printButton').addEventListener('click',()=>window.print());$('resetDemo').addEventListener('click',reset);if(live)$('resetDemo').hidden=true;
   $('privacyInfo').addEventListener('click',()=>$('privacyDialog').showModal());$('closePrivacy').addEventListener('click',()=>$('privacyDialog').close());$('gotItPrivacy').addEventListener('click',()=>$('privacyDialog').close());
-  document.querySelectorAll('.rail-button').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.action==='roster'?'personnel':'missions')));
-  document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();$('searchInput').focus();navigate('personnel');}});
+  document.querySelectorAll('.rail-button').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.action==='roster'?'directory':'missions')));
+  document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();$('directorySearch').focus();navigate('directory');}});
   async function reloadRemote(){
     const data=await backend.loadAll();
     characters=data.characters;reports=data.reports;
     if(!characters.some(c=>c.uid===selectedId))selectedId=characters[0]?.uid||'';
-    if(view==='missions')renderMissions();else renderAll();
+    if(view==='missions')renderMissions();else if(view==='directory')renderDirectory();else renderAll();
   }
   function showGate(title,message,showLogin=false){
     document.body.classList.add('secure-locked');
@@ -400,7 +472,7 @@
       const role=await backend.verify();
       if(!role.member){showGate('ACCESS DENIED','Dieser Discord-Account ist kein bestätigtes Mitglied des RP-Servers.');return;}
       gmMode=role.admin;renderGM();
-      await reloadRemote();navigate('personnel');
+      await reloadRemote();navigate('directory');
       $('authGate').hidden=true;document.body.classList.remove('secure-locked');
       $('privacyInfo').hidden=true;
       document.querySelector('.preview-warning').innerHTML='<strong>GESCHÜTZTES ARCHIV</strong><span>Discord-Mitgliedschaft geprüft · Gespeicherte Akten und Anträge in Supabase</span>';

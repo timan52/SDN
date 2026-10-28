@@ -66,6 +66,17 @@ Deno.serve(async request => {
       verified_until: expires.toISOString(),
     });
     if (updateError) return respond(503, { error: 'Cannot update membership authorization' });
+    // Store only display information of verified guild members. RLS permits other
+    // verified members to search this minimal directory, not privileged auth data.
+    if (verified) {
+      const accountName = String(member?.user?.username || user.user_metadata?.user_name || discordId).slice(0, 100);
+      const displayName = String(member?.nick || member?.user?.global_name || accountName).slice(0, 100);
+      const { error: profileError } = await admin.from('sdn_discord_profiles').upsert({
+        user_id: user.id, discord_name: displayName, discord_username: accountName,
+        updated_at: checkedAt.toISOString(),
+      });
+      if (profileError) return respond(503, { error: 'Cannot update verified Discord profile' });
+    }
     return respond(200, { member: verified, admin: Boolean(isAdmin), expiresAt: expires.toISOString() });
   } catch {
     return respond(503, { error: 'Discord membership check could not be completed' });
