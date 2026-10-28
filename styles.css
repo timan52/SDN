@@ -573,3 +573,45 @@ html,body{max-width:100%;overflow-x:clip}
 .sdn-activity-dialog select,.sdn-activity-dialog textarea{font:inherit;padding:12px;border:1px solid #85978a;background:#fff;color:#20352b;width:100%;box-sizing:border-box}
 .sdn-activity-buttons{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap}
 @media(max-width:1050px){.record-top-actions{flex-wrap:wrap}.sdn-danger-button{font-size:.76rem}}
+
+
+/* v0.14 – Position-specific hero cards and compact mission cards */
+:root{
+  --sdn-role-superheld:#dd575c;      /* Rot */
+  --sdn-role-dispatcher:#ed9748;     /* Orange */
+  --sdn-role-arzt:#8181e6;           /* Indigo */
+  --sdn-role-techniker:#4f9fdd;      /* Blau */
+  --sdn-role-manager:#61b987;        /* Grün */
+  --sdn-role-teamleiter:#e6c95f;     /* Gelb */
+  --sdn-role-standortleitung:#b184db;/* Violett */
+}
+.sdn-directory-filters:not(.sdn-report-filters){grid-template-columns:minmax(220px,2fr) repeat(3,minmax(130px,1fr));}
+.sdn-directory-card{
+  --sdn-card-accent:#80948c;
+  --sdn-card-wash:rgba(128,148,140,.12);
+  border-color:color-mix(in srgb,var(--sdn-card-accent) 62%,#354c47);
+  background:linear-gradient(150deg,var(--sdn-card-wash),transparent 70%),#1b2c2c;
+}
+.sdn-directory-card:hover,.sdn-directory-card:focus-visible{
+  border-color:var(--sdn-card-accent);
+  background:linear-gradient(150deg,var(--sdn-card-wash),transparent 70%),#253934;
+  box-shadow:0 7px 20px rgba(0,0,0,.18);
+}
+.sdn-directory-card .sdn-dir-photo{border-bottom-color:var(--sdn-card-accent);}
+.sdn-directory-card .sdn-dir-id{color:var(--sdn-card-accent);}
+.sdn-position-tag{display:inline-block;align-self:flex-start;max-width:100%;padding:4px 9px;border:1px solid var(--sdn-card-accent);background:var(--sdn-card-wash);color:var(--sdn-card-accent);font:800 10px/1.2 monospace;letter-spacing:.07em;text-transform:uppercase;overflow-wrap:anywhere}
+.sdn-position-superheld{--sdn-card-accent:var(--sdn-role-superheld);--sdn-card-wash:rgba(221,87,92,.17);}
+.sdn-position-dispatcher{--sdn-card-accent:var(--sdn-role-dispatcher);--sdn-card-wash:rgba(237,151,72,.16);}
+.sdn-position-arzt{--sdn-card-accent:var(--sdn-role-arzt);--sdn-card-wash:rgba(129,129,230,.16);}
+.sdn-position-techniker{--sdn-card-accent:var(--sdn-role-techniker);--sdn-card-wash:rgba(79,159,221,.16);}
+.sdn-position-manager{--sdn-card-accent:var(--sdn-role-manager);--sdn-card-wash:rgba(97,185,135,.16);}
+.sdn-position-teamleiter{--sdn-card-accent:var(--sdn-role-teamleiter);--sdn-card-wash:rgba(230,201,95,.16);}
+.sdn-position-standortleitung{--sdn-card-accent:var(--sdn-role-standortleitung);--sdn-card-wash:rgba(177,132,219,.16);}
+.sdn-case-dispatcher{font:700 11px/1.5 monospace;letter-spacing:.025em;color:#c4d7d0;margin:3px 0 8px;}
+#missionsView .sdn-case-heroes{font-weight:700;line-height:1.5;margin:9px 0 4px;}
+#missionsView .sdn-case-card .sdn-card-approval{margin-top:auto;}
+.report-dispatcher-section{padding-top:10px;margin-bottom:25px;}
+.report-dispatcher-section .tab-heading{margin-bottom:9px;}
+.report-no-dispatcher{color:#63786e;font-size:13px;margin:8px 0;}
+@media(max-width:1000px){.sdn-directory-filters:not(.sdn-report-filters){grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:600px){.sdn-directory-filters:not(.sdn-report-filters){grid-template-columns:1fr;}}

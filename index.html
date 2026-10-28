@@ -36,7 +36,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg>
         </button>
       </div>
-      <div class="rail-bottom" title="Mitgliederportal">v0.12<span>●</span></div>
+      <div class="rail-bottom" title="Mitgliederportal">v0.14<span>●</span></div>
     </aside>
 
     <div class="main-column">
@@ -59,7 +59,7 @@
           <div class="sdn-directory-filters">
             <label class="sdn-search-label">SUCHE<input type="search" id="directorySearch" autocomplete="off" placeholder="Heldenname, Discord-Name, bürgerlicher Name, ID ..."></label>
             <label>ANZEIGE<select id="directoryFilter"><option value="all">Alle Helden</option><option value="mine">Meine Helden</option></select></label>
-            <label>SORTIEREN<select id="directorySort"><option value="new">Neueste zuerst</option><option value="old">Älteste zuerst</option></select></label>
+            <label>POSITION<select id="directoryPosition"><option value="all">Alle Positionen</option><option value="Superheld">Superheld</option><option value="Dispatcher">Dispatcher</option><option value="Teamleiter">Teamleiter</option><option value="Manager">Manager</option><option value="Standortleitung">Standortleitung</option><option value="Techniker">Techniker</option><option value="Arzt">Arzt</option></select></label><label>SORTIEREN<select id="directorySort"><option value="new">Neueste zuerst</option><option value="old">Älteste zuerst</option><option value="position">Position (A–Z)</option><option value="position-desc">Position (Z–A)</option></select></label>
           </div>
           <div class="sdn-directory-results"><span id="directoryCount">0 AKTEN</span><button class="operation-add" id="directoryAdd" type="button">＋ NEUEN HELDEN ERSTELLEN</button></div>
           <div class="sdn-directory-grid" id="directoryCards" aria-label="Scrollbares Heldenverzeichnis" tabindex="0" aria-live="polite"></div>
@@ -117,6 +117,7 @@
           <label class="span2">KUNDE<input name="customer" maxlength="130" placeholder="Auftraggeber / Kunde" /></label>
           <label class="span2">ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="open">Noch offen</option><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option></select></label><label>EINSATZBEGINN *<input name="startDate" type="date" required /></label><label>EINSATZENDE<input name="endDate" type="date" disabled /></label><label class="span2">EINSATZORT<input name="location" maxlength="150" placeholder="Ort des Einsatzes" /></label><label class="span2">LINK ZUM RP<input name="rpLink" type="url" maxlength="300" placeholder="https://discord.com/channels/…/…/…" /></label>
           <label class="span2">BETEILIGTE HELDEN *<span class="field-hint">Du kannst alle freigegebenen Helden auswählen, auch die anderer Spieler.</span><div class="participant-checks" id="participantChecks"></div></label>
+          <label class="span2">DISPATCHER <span class="field-hint">Optional · nur freigegebene Personalakten mit Position Dispatcher</span><select name="dispatcherId" id="missionDispatcher"><option value="">Kein Dispatcher zugewiesen</option></select></label>
           <div class="sdn-customer-review span2" id="missionCustomerReview" hidden>
             <label>KUNDENSTERNE <span class="field-hint">Nur bei abgeschlossenem Fall</span>
               <select name="customerStars" aria-label="Kundensterne von 1 bis 5">

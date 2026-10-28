@@ -1,50 +1,57 @@
-# SDN-Personalakten v0.13 – Löschen und Aktivitätsstatus
+# SDN v0.14 – Positionsfarben, Filter und Dispatcher
 
-Dieses Update baut auf **v0.12** auf. Es ersetzt **keine** Discord- oder Supabase-Anmeldung und löscht bei der Installation **keine** bestehenden Akten.
+Dieses Update setzt **SDN v0.13** voraus. Es aktualisiert die Website und zwei PostgreSQL-Funktionen, nicht die Discord-Application und nicht die Supabase-Edge-Functions.
 
-## Neu
+## Änderungen
 
-### SL: Charaktere und Einsätze endgültig löschen
+1. **Heldenverzeichnis:** Position auf jeder Heldenkachel sichtbar. Farbcodierung: Superheld Rot, Dispatcher Orange, Teamleiter Gelb, Manager Grün, Standortleitung Violett, Techniker Blau, Arzt Indigo. Ein Positionsfilter und die zusätzliche Sortierung nach Position (A–Z/Z–A) sind verfügbar. Die bisherigen Filter und Datums-Sortierungen bleiben erhalten.
+2. **Einsatzkacheln:** Die kurze **Ausgangslage** entfällt vollständig. Bei beteiligten Charakteren stehen nur die Namen ohne das Präfix „HELDEN:“. Ansonsten bleiben Fallstatus, Kunde, Einsatzdaten und etwaige Kundensterne sichtbar.
+3. **Einsatzformular:** Unter „Beteiligte Helden“ gibt es eine **optionale, separate Dispatcher-Auswahl**. Dort sind ausschließlich freigegebene Charaktere mit der Position **Dispatcher** wählbar. Ein ausgewählter Dispatcher wird in der Einsatzdetailansicht namentlich verlinkt und sieht nach Freigabe den Bericht auch im eigenen Einsatzreiter.
+4. **Löschen:** Wird eine Dispatcher-Personalakte gelöscht, entfernt die Datenbank diese Zuordnung auch aus allen bestehenden Berichten. Die Berichte selbst bleiben erhalten.
 
-- Die Löschbuttons stehen **ausschließlich in der jeweiligen Detailansicht** und sind nur in der SL-Ansicht sichtbar.
-- Eine Browser-Sicherheitsabfrage erklärt die Folgen; bei **Abbrechen** wird nichts gelöscht.
-- **Charakter löschen:** Alle gespeicherten Einsätze werden geprüft und die Charakter-ID aus ihren Teilnehmerlisten entfernt. Andere Charaktere verlieren ihre Bekanntschaftsverknüpfungen zu dieser Akte. Offene Beziehungs-Tickets, die auf die gelöschte Akte verweisen, werden abgelehnt. Private TOP-SECRET-Daten, Änderungsanträge und Aktennotizen **der gelöschten Akte** werden per Datenbank-Fremdschlüssel mitgelöscht. Andere Aktennotizen, bei denen der gelöschte Charakter *Verfasser* war, bleiben als historische Textnotizen mit damaligem Namen und Datum bestehen, verlieren aber ihre Verfasser-Verknüpfung.
-- **Einsatz löschen:** Das Einsatzprotokoll verschwindet aus dem Archiv. Alle zugehörigen Verweise verschwinden automatisch aus den Personalakten, weil die Einsätze dort aus den tatsächlich existierenden, freigegebenen Protokollen berechnet werden.
-- Die gelöschte ID wird nicht neu vergeben. Es bleibt nur ein schmaler Löschvermerk im allgemeinen Auditlog, **ohne** den gelöschten Inhalt.
-- **Wichtig:** Veröffentlichte Portraitdateien auf GitHub Pages und nicht mehr benötigte private Bildvorlagen werden mit diesem Datenbankupdate **noch nicht automatisch aus GitHub/Storage gelöscht**. Sie sind nach dem Löschen nicht mehr in der Website verlinkt; gegebenenfalls später separat aufräumen. Weitere Medien auf Discord bleiben ebenfalls unberührt.
+## Installation – in dieser Reihenfolge
 
-### Aktiv/Inaktiv nach der Freigabe
+### 1. Sicherheitskopie erstellen
 
-- Der Charakter erhält erst **nach** seiner Freigabe einen optionalen Status-Tag `AKTIV` oder `INAKTIV`.
-- Der Tag erscheint auf der Heldenkachel und in der Personalakte.
-- Der **Spieler** kann für eigene freigegebene Charaktere einen Statuswechsel **als normales Änderungsticket** mit optionalem Kommentar beantragen. Erst nach der SL-Genehmigung wird der Tag geändert.
-- Die **SL** kann den Status bei freigegebenen Akten unmittelbar setzen (ohne Ticket); diese Aktion wird protokolliert.
-- Bestehende Akten ohne Tag bleiben ohne Kennzeichnung, bis jemand einen Status festlegt.
-- HR hat keine Lösch- oder direkten Statusrechte.
+Vor dem SQL-Update die Tabellen `sdn_reports` und `sdn_characters` aus Supabase exportieren und den letzten funktionsfähigen GitHub-Commit sichern.
 
-## Installation – unbedingt in dieser Reihenfolge
+### 2. SQL in Supabase ausführen
 
-1. **Backup:** Sicherung der Tabellen `sdn_characters`, `sdn_reports`, `sdn_tickets` und `sdn_file_notes` (z. B. Exporte über Supabase). Das Löschen ist später **unwiderruflich**. Für GitHub vorher einen Commit/Branch als Sicherung erstellen.
-2. **Supabase → SQL Editor:** Datei `supabase/migrations/202610280005_deletion_activity.sql` aus diesem Paket in einem Texteditor öffnen; den **kompletten SQL-Inhalt** in den SQL Editor kopieren (nicht den Dateipfad) und einmal mit **Run** ausführen. Eine Erfolgsmeldung `Success. No rows returned` ist erwartbar.
-3. **GitHub:** In `timan52/SDN` die **vier** Dateien `index.html`, `app.js`, `backend.js` und `styles.css` durch die aktualisierten Dateien aus diesem Paket ersetzen und auf `main` pushen.
-4. **Nicht ersetzen:** `config.js`, `portrait-editor.js`, `.env`, Supabase-Secrets, Discord-Funktionen, vorhandene Portraits und die bereits angewendeten v0.7–v0.12-Migrationen.
-5. Die Website `https://timan52.github.io/SDN/` mit `Strg + Umschalt + R` neu laden.
+Unter **Supabase → SQL Editor** den gesamten INHALT der Datei
 
-**Keine neuen Edge Functions nötig:** Die Website verwendet drei neue, abgesicherte PostgreSQL-Funktionen (RPCs). Das SQL-Skript aktiviert diese und erteilt nur angemeldeten Nutzern das Recht, sie aufzurufen. **Die Funktionen selbst** prüfen zusätzlich die serverseitig bestätigte Discord-Spielleitungsrolle. Der Browser kann diese Sicherheitsprüfung nicht umgehen.
+`supabase/migrations/202610280006_dispatchers.sql`
 
-## Empfohlene Tests vor dem ersten echten Löschen
+kopieren (nicht bloß den Dateipfad). Mit **Run** ausführen. Erwartete Meldung: `Success. No rows returned`.
 
-1. **SL:** Freigegebenen Testcharakter öffnen. Der Button `AKTE LÖSCHEN` und `AKTIVITÄT SETZEN` müssen erscheinen. Zum Löschen zunächst **Abbrechen** wählen; die Akte muss erhalten bleiben.
-2. **Spieler:** Eigenen freigegebenen Testcharakter öffnen. `AKTIVITÄT SETZEN` ist sichtbar, `AKTE LÖSCHEN` nicht. Als `Inaktiv` beantragen; die Akte bleibt bis zur Genehmigung unverändert.
-3. **SL:** Aktivitätsticket genehmigen. Anschließend sollte der Tag `INAKTIV` auf der Kachel und in der Akte erscheinen.
-4. **SL:** Den Status ohne Ticket wieder auf `AKTIV` setzen.
-5. **SL:** Testeinsatz mit einem Testcharakter erstellen/freigeben. Den Charakter löschen, **nachdem** du den Report und eine Bekanntschaft mit einem weiteren Testcharakter geprüft hast. Das Protokoll soll bleiben, aber ohne gelöschten Teilnehmer; die Bekanntschaft soll entfernt sein.
-6. **SL:** Danach einen **eigenen Testeinsatz** löschen. Der Einsatz soll aus Archiv und den beteiligten Charakterakten verschwinden.
-7. **Spieler ohne SL-Rolle:** Ein direkter Aufruf der Lösch-RPC sollte durch Supabase mit einer Berechtigungsfehlermeldung abgelehnt werden. Der fehlende Button allein ist kein ausreichender Test.
+Das Skript ersetzt die Funktionen `sdn_submit_report` und `sdn_delete_character`, ohne alte Berichte oder Personalakten zu löschen. Es ist für die bereits installierte Version v0.13 gedacht. **Ältere SQL-Migrationen danach nicht erneut ausführen**, da sie diese neuen Funktionen sonst überschreiben könnten.
+
+### 3. Website auf GitHub aktualisieren
+
+In `https://github.com/timan52/SDN` genau diese drei Dateien im Stammverzeichnis ersetzen:
+
+- `index.html`
+- `app.js`
+- `styles.css`
+
+Anschließend auf `main` committen und pushen. **Unverändert lassen**: `config.js`, `backend.js`, `portrait-editor.js`, `.env`, Supabase-Secrets, Discord- und GitHub-Token, Portraitdateien, bestehende Edge Functions.
+
+### 4. Website aktualisieren
+
+`https://timan52.github.io/SDN/` öffnen und `Strg + Umschalt + R` drücken. Links steht nun `v0.14`.
+
+## Testfälle
+
+1. **Heldenverzeichnis:** Positionen auswählen; es erscheinen nur entsprechende Charaktere. „Position (A–Z)“ und „Position (Z–A)“ sortieren die Kacheln um. Alle sieben Positionen haben eigene Akzentfarben. Portraitbilder bleiben im 4:5-Format.
+2. **Einsatzübersicht:** Auf der Kachel stehen nur die beteiligten Heldennamen; die Ausgangslage fehlt. Die großen Statusstempel und optionalen Kundensterne bleiben erhalten.
+3. **Neuer Einsatz:** Erstelle/freigebe zunächst einen Testcharakter mit Position `Dispatcher` (falls noch keiner existiert). Dieser muss im neuen Dropdown erscheinen, Charaktere mit anderen Positionen dürfen dort nicht erscheinen.
+4. **Einsatz einreichen:** Testbericht mit einem Helden und einem Dispatcher einreichen. In der Detailansicht beide Zuordnungen kontrollieren. Der Bericht bleibt bis zur SL-Freigabe aus der verknüpften Akte ausgeblendet; danach soll er bei Held **und** Dispatcher auftauchen.
+5. **SL-Löschtest:** Einen **eigenen Test-Dispatcher** löschen und überprüfen, dass der Einsatzbericht weiterhin existiert, aber keine Dispatcher-Zuordnung mehr zeigt. Nicht mit echten RP-Daten testen.
+6. **Normale Spieler:** Positionsfilter, Kacheln und eigene Einsatzzuweisungen prüfen; Rechte auf Tickets, Freigaben und Löschungen dürfen sich nicht verändert haben.
 
 ## Technische Hinweise
 
-- Das Lösch-SQL führt die Verknüpfungsbereinigung und eigentliche Löschung in **einer Datenbanktransaktion** aus. Tritt ein SQL-Fehler auf, wird die ganze Aktion zurückgerollt.
-- `sdn_file_notes.author_character_id` wird zu einer nullable Foreign-Key-Spalte mit `ON DELETE SET NULL`, damit fremde Aktennotizen mit historischem Verfassernamen erhalten bleiben.
-- Spielerstatus nutzt das vorhandene Ticketformat (`kind: field`, `key: activityStatus`). Der SQL-Trigger verhindert unzulässige Statuswerte und einen Tag vor der Freigabe.
-- Die vier JavaScript-/HTML-Dateien wurden auf Syntax geprüft; die neue UI wurde mit simulierten SL- und Spieler-Sitzungen in Chromium getestet. Die SQL-Migration kann **ohne Zugriff auf dein echtes Supabase-Projekt nicht live geprüft werden**.
+- `dispatcherId` wird innerhalb des existierenden JSONB-Einsatzberichts gespeichert; dafür ist keine zusätzliche Tabellenspalte erforderlich.
+- Die Datenbank prüft bei der Einreichung serverseitig, dass diese ID zu einer **freigegebenen** Personalakte mit Position `Dispatcher` gehört. Ein manipuliertes Browserformular kann die Einschränkung nicht umgehen.
+- Bestehende Berichte ohne Dispatcher funktionieren unverändert.
+- Die Position `Standortleitung` wird entsprechend dem existierenden Dropdown verwendet und violett dargestellt.
+- JavaScript-Syntax und die Oberfläche wurden lokal mit simulierten Sitzungen getestet, auch auf einem schmalen Bildschirm. **Die SQL-Funktionen wurden nicht gegen deine echte Supabase-Datenbank ausgeführt.**
