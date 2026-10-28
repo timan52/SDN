@@ -34,7 +34,7 @@
   const REPORTS = [];
   let characters=[],reports=[],fileNotes=[],selectedId='',activeTab='identity',view='directory',gmMode=false,hrMode=false;
   let directoryFilter='all', directoryPosition='all', directorySort='new', missionOwnership='all', missionCase='all', missionSort='new', missionSearch='';
-  let directoryScroll=0, missionScroll=0;
+  let directoryScroll=0, missionScroll=0, missionFilterOpen=false;
   let editTarget=null,editNew=false,nextChar=1,nextMission=1,nextTicket=1,reportFocus=null,missionFilter='all',reportEditTarget=null;
   let stagedPortrait=null, portraitPreviewUrl=null, revealedCivilNameFor=null;
   const backend=window.SDNBackend;
@@ -120,9 +120,9 @@
       const applications=hasNewRequest(c), changes=hasChangeRequest(c);
       return `<button type="button" class="sdn-directory-card sdn-position-${positionClass(c)}" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><strong>${safe(c.alias||'UNBENANNT')}</strong><div class="sdn-position-row"><span class="sdn-position-tag">${safe(c.role||'Position unbekannt')}</span>${activityBadge(c)}</div><small>${safe(ownerName(c))}</small><div class="sdn-card-approval">${cardApproval(c.status!=='approved'||applications||changes,c.status==='approved',c.ownerId===backend?.userId)}${gmMode&&applications?'<span class="sdn-card-reason">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-card-reason">ÄNDERUNG</span>':''}</div></div></button>`;
     }).join(''):'<div class="sdn-directory-empty">Keine Helden mit diesen Such- und Filtereinstellungen gefunden.</div>';
-    $('directoryCards').scrollTop=directoryScroll;
+    // The archive uses normal document scrolling, not an internally scrollable canvas.
     $('directoryCards').querySelectorAll('[data-directory-open]').forEach(button=>button.addEventListener('click',()=>{
-      directoryScroll=$('directoryCards').scrollTop;
+      directoryScroll=window.scrollY;
       selectedId=button.dataset.directoryOpen;activeTab='identity';navigate('personnel');
     }));
   }
@@ -184,11 +184,11 @@
       }
       case 'attributes':return `<div class="sdn-section-intro"><small>02 / PERSONALBEWERTUNG</small><h3>Skillmatrix</h3></div><div class="sdn-skill-layout"><div class="sdn-skill-radar">${radar(c)}</div><div class="sdn-skill-side">${statBars(c)}<section class="sdn-paper-card sdn-skill-note"><h4>ANMERKUNGEN</h4>${paragraph(c.skillNotes)}</section>${c.proposals.some(p=>p.status==='pending')?'<p class="pending-hint">Neue Werte werden erst nach Freigabe sichtbar.</p>':''}</div></div>`;
       case 'abilities':return `<div class="sdn-section-intro"><small>03 / FÄHIGKEITSPROFIL</small><h3>Fähigkeiten</h3></div><div class="sdn-ability-stack">
-        <section class="sdn-ability-area"><div class="sdn-ability-header"><small>01 / SPEZIALFÄHIGKEIT</small><h4>Individuelle Fähigkeit</h4></div><div class="sdn-ability-facts">${recordPair('FÄHIGKEIT',c.powerName)}${recordPair('KLASSE',c.classCode)}${recordPair('URSPRUNG',c.origin)}</div>
-          ${subsection('BESCHREIBUNG',c.powerDescription)}${subsection('SCHWÄCHEN DER SPEZIALFÄHIGKEIT',c.weaknesses)}
+        <section class="sdn-ability-area"><div class="sdn-ability-header"><h4>01 / SPEZIALFÄHIGKEIT</h4></div><div class="sdn-ability-facts">${recordPair('FÄHIGKEIT',c.powerName)}${recordPair('KLASSE',c.classCode)}${recordPair('URSPRUNG',c.origin)}</div>
+          ${subsection('BESCHREIBUNG',c.powerDescription)}${subsection('NACHTEIL/EINSCHRÄNKUNG/SCHWÄCHE',c.weaknesses)}
           <div class="tab-heading">MOVES / ANGRIFFE / UNTERFÄHIGKEITEN</div>
           ${c.powers?.length?`<div class="sdn-move-list">${c.powers.map((p,i)=>`<div class="sdn-move"><span>${String(i+1).padStart(2,'0')}</span><div><strong>${show(p.title)}</strong>${paragraph(p.text)}</div></div>`).join('')}</div>`:'<div class="missing-field">Keine Daten vorhanden</div>'}
-        </section><section class="sdn-ability-area sdn-general-area"><div class="sdn-ability-header"><small>02 / ALLGEMEINES PROFIL</small><h4>Allgemeine Eigenschaften</h4></div>
+        </section><section class="sdn-ability-area sdn-general-area"><div class="sdn-ability-header"><h4>02 / ALLGEMEINES PROFIL</h4></div>
           ${subsection('ALLGEMEINE STÄRKEN',c.generalStrengths)}${subsection('ALLGEMEINE SCHWÄCHEN',c.generalWeaknesses)}${subsection('SONSTIGE ALLGEMEINE FÄHIGKEITEN',c.generalAbilities)}
         </section></div>`;
       case 'equipment':return `<div class="sdn-section-intro"><small>04 / MATERIAL UND BEKLEIDUNG</small><h3>Ausrüstung</h3></div><div class="sdn-equipment-grid"><section class="sdn-paper-card"><h4>AUSSTATTUNG</h4>${paragraph(c.equipmentItems)}</section><section class="sdn-paper-card"><h4>SUPERHELDENKOSTÜM</h4>${paragraph(c.costumeDescription)}</section></div>`;
@@ -293,7 +293,7 @@
     }));
   }
   function attachOpenReport(root){root.querySelectorAll('[data-open-report]').forEach(b=>b.addEventListener('click',()=>{
-    const archive=$('missionCards');if(view==='missions'&&archive)missionScroll=archive.scrollTop;
+    if(view==='missions')missionScroll=window.scrollY;
     reportFocus=b.dataset.openReport;navigate('mission-detail');
   }));}
   function renderMissions(){
@@ -322,13 +322,13 @@
         return (missionSort==='new'?order:-order)||String(a.id).localeCompare(String(b.id));
       });
       const missionOptions=[['all','Alle Einsätze'],['mine','Meine Einsätze'],...(gmMode?[['pending','Offene Berichtsfreigaben (SL)']]:[])];
-      root.innerHTML=`<div class="mission-dashboard"><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Kunde, Held, Discord ..." value="${safe(missionSearch)}" autocomplete="off"></label><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results"><span>${visible.length} EINSATZAKTEN</span><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="missions-catalog" id="missionCards" tabindex="0" aria-label="Scrollbares Einsatzarchiv">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div>`;
+      root.innerHTML=`<div class="mission-dashboard"><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Kunde, Held, Discord ..." value="${safe(missionSearch)}" autocomplete="off"></label><details class="sdn-filter-menu" ${missionFilterOpen?'open':''}><summary>FILTER <span class="sdn-filter-chevron" aria-hidden="true">⌄</span></summary><div class="sdn-filter-popover"><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label></div></details><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results"><span>${visible.length} EINSATZAKTEN</span><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="missions-catalog" id="missionCards" aria-label="Einsatzarchiv">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div>`;
       $('newMission').addEventListener('click',()=>openMissionDialog());
       $('missionSearch').addEventListener('input',e=>{missionSearch=e.target.value;missionScroll=0;const caret=e.target.selectionStart;renderMissions();const next=$('missionSearch');next.focus();next.setSelectionRange(caret,caret);});
       $('missionOwnership').addEventListener('change',e=>{missionOwnership=e.target.value;missionScroll=0;renderMissions();});
       $('missionCase').addEventListener('change',e=>{missionCase=e.target.value;missionScroll=0;renderMissions();});
       $('missionSort').addEventListener('change',e=>{missionSort=e.target.value;missionScroll=0;renderMissions();});
-      $('missionCards').scrollTop=missionScroll;
+      root.querySelector('.sdn-filter-menu')?.addEventListener('toggle',event=>{missionFilterOpen=event.currentTarget.open;});
       attachOpenReport(root);
     }
     // These controls are only present in the report detail view.
@@ -390,6 +390,7 @@
     return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><div class="sdn-report-detail-stamps"><div class="classification approval-stamp ${r.status==='approved'?'approved':'pending'}">${r.status==='approved'?'APPROVED':r.status==='pending'?'PENDING':'REJECTED'}<small>${r.status==='approved'?'SDN · VERIFIZIERT':r.status==='pending'?'REVIEW REQUIRED':'NICHT FREIGEGEBEN'}</small></div><div class="sdn-case-stamp ${caseState(r)==='closed'?'is-closed':'is-open'}">${caseState(r)==='closed'?'ABGESCHLOSSEN':'FALL OFFEN'}</div></div></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZLEVEL',REPORT_LEVELS.includes(String(r.level||'').toUpperCase()) ? String(r.level).toUpperCase() : 'Nicht eingestuft'],['EINSATZBEGINN',r.startDate||r.date],['EINSATZENDE',r.endDate||'Keine Daten vorhanden'],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]],['KUNDE',r.customer||'Keine Daten vorhanden']].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div><div class="report-dispatcher-section"><div class="tab-heading">DISPATCHER</div>${dispatcher?`<button class="person-pill" data-open-character="${safe(dispatcher.uid)}" type="button">${safe(dispatcher.alias)} <span>SDN #${safe(dispatcher.sdnId)} ↗</span></button>`:'<p class="report-no-dispatcher">Nicht zugewiesen</p>'}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${r.damageStatus==='yes'?subsection('SCHADENSBERICHT',r.damages):''}${subsection('04 / ZUSATZVERMERKE',r.notes)}${customerRatingHtml(r,true)}${caseState(r)==='closed'?subsection('KUNDENKOMMENTAR',r.customerComment):''}${r.rpLink&&/^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d+\/\d+\/\d+$/.test(r.rpLink)?`<a class="report-rp-link" href="${safe(r.rpLink)}" target="_blank" rel="noopener noreferrer">↗ ZUM DISCORD-RP</a>`:''}${r.requestComment?subsection('ANMERKUNG ZUM ANTRAG',r.requestComment):''}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${reportEditsHtml(r)}</div></article>`;
   }
   function navigate(to){
+    const previousView=view;
     view=to;
     const directory=to==='directory', personnel=to==='personnel', mission=to==='missions', report=to==='mission-detail';
     $('heroDirectory').hidden=!directory;
@@ -407,7 +408,9 @@
     }
     document.querySelectorAll('.rail-button').forEach(b=>b.classList.toggle('active',b.dataset.action===((mission||report)?'missions':'roster')));
     if(mission||report)renderMissions();else if(personnel)renderAll();else renderDirectory();
-    window.scrollTo({top:0,behavior:'instant'});
+    const backToDirectory=to==='directory' && previousView==='personnel';
+    const backToMissions=to==='missions' && previousView==='mission-detail';
+    requestAnimationFrame(()=>window.scrollTo({top:backToDirectory?directoryScroll:backToMissions?missionScroll:0,behavior:'instant'}));
   }
   function renderAll(){renderRecord();}
   const formInput=(key,label,opts={})=>{const v=editNew?'':fieldValue(editTarget,key);const max=opts.max||255;return `<label class="${opts.wide?'span2':''}">${safe(label)}${opts.hint?`<span class="field-hint">${safe(opts.hint)}</span>`:''}${opts.area?`<textarea name="${key}" maxlength="${max}" rows="${opts.rows||3}">${safe(v)}</textarea>`:`<input name="${key}" maxlength="${max}" value="${safe(v)}" />`}</label>`;};

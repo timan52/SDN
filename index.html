@@ -36,7 +36,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg>
         </button>
       </div>
-      <div class="rail-bottom" title="Mitgliederportal">v0.21<span>●</span></div>
+      <div class="rail-bottom" title="Mitgliederportal">v0.23<span>●</span></div>
     </aside>
 
     <div class="main-column">
@@ -58,11 +58,16 @@
 
           <div class="sdn-directory-filters">
             <label class="sdn-search-label">SUCHE<input type="search" id="directorySearch" autocomplete="off" placeholder="Heldenname, Discord-Name, bürgerlicher Name, ID ..."></label>
-            <label>ANZEIGE<select id="directoryFilter"><option value="all">Alle Helden</option><option value="mine">Meine Helden</option></select></label>
-            <label>POSITION<select id="directoryPosition"><option value="all">Alle Positionen</option><option value="Superheld">Superheld</option><option value="Dispatcher">Dispatcher</option><option value="Teamleiter">Teamleiter</option><option value="Manager">Manager</option><option value="Standortleitung">Standortleitung</option><option value="Techniker">Techniker</option><option value="Arzt">Arzt</option></select></label><label>SORTIEREN<select id="directorySort"><option value="new">Neueste zuerst</option><option value="old">Älteste zuerst</option><option value="position">Position (A–Z)</option><option value="position-desc">Position (Z–A)</option></select></label>
+            <details class="sdn-filter-menu"><summary>FILTER <span class="sdn-filter-chevron" aria-hidden="true">⌄</span></summary>
+              <div class="sdn-filter-popover">
+                <label>ANZEIGE<select id="directoryFilter"><option value="all">Alle Charaktere</option><option value="mine">Meine Charaktere</option></select></label>
+                <label>POSITION<select id="directoryPosition"><option value="all">Alle Positionen</option><option value="Superheld">Superheld</option><option value="Dispatcher">Dispatcher</option><option value="Teamleiter">Teamleiter</option><option value="Manager">Manager</option><option value="Standortleitung">Standortleitung</option><option value="Techniker">Techniker</option><option value="Arzt">Arzt</option></select></label>
+              </div>
+            </details>
+            <label>SORTIEREN<select id="directorySort"><option value="new">Neueste zuerst</option><option value="old">Älteste zuerst</option><option value="position">Position (A–Z)</option><option value="position-desc">Position (Z–A)</option></select></label>
           </div>
           <div class="sdn-directory-results"><span id="directoryCount">0 AKTEN</span><button class="operation-add" id="directoryAdd" type="button">＋ NEUEN HELDEN ERSTELLEN</button></div>
-          <div class="sdn-directory-grid" id="directoryCards" aria-label="Scrollbares Heldenverzeichnis" tabindex="0" aria-live="polite"></div>
+          <div class="sdn-directory-grid" id="directoryCards" aria-label="Heldenverzeichnis" aria-live="polite"></div>
         </section>
         <div class="work-grid" id="personnelView">
 

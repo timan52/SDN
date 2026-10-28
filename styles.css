@@ -932,3 +932,82 @@ html,body{max-width:100%;overflow-x:clip}
   .sdn-case-card,
   .mission-cards.embedded .sdn-case-card { height: 346px; min-height: 346px; max-height: 346px; }
 }
+
+/* SDN v0.23 – Übersichten laufen mit der gesamten Dokumentseite, ohne zweite Scrollbar. */
+#heroDirectory .sdn-directory-grid,
+#missionsView .missions-catalog {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  overflow-y: visible !important;
+  overscroll-behavior: auto !important;
+  scrollbar-width: auto;
+  padding-bottom: 20px;
+}
+#heroDirectory,
+#missionsView .mission-dashboard { overflow: visible; }
+#heroDirectory .sdn-directory-grid { align-items: stretch; }
+#missionsView .missions-catalog { align-items: stretch; }
+
+/* Ein Filter-Menü pro Übersicht: Anzeige + Position beziehungsweise Anzeige + Fallstatus. */
+.sdn-directory-filters,
+.sdn-directory-filters:not(.sdn-report-filters),
+.sdn-report-filters {
+  grid-template-columns: minmax(220px, 2fr) minmax(155px, 1fr) minmax(160px, 1fr);
+  align-items: end;
+  overflow: visible;
+}
+.sdn-filter-menu { position: relative; min-width: 0; align-self: end; }
+.sdn-filter-menu summary {
+  height: 43px; padding: 0 13px;
+  list-style: none; display: flex; justify-content: space-between; align-items: center;
+  border: 1px solid #50635c; background: #101b1d; color: #f2f2e7;
+  cursor: pointer; font: 800 11px monospace; letter-spacing: .08em;
+  user-select: none;
+}
+.sdn-filter-menu summary::-webkit-details-marker { display: none; }
+.sdn-filter-menu summary:hover,
+.sdn-filter-menu[open] summary { border-color: #f18b42; background: #233837; }
+.sdn-filter-menu summary:focus-visible { outline: 2px solid #f18b42; outline-offset: 3px; }
+.sdn-filter-chevron { color: #e4aa72; font-size: 19px; transition: transform .15s; }
+.sdn-filter-menu[open] .sdn-filter-chevron { transform: rotate(180deg); }
+.sdn-filter-popover {
+  position: absolute; z-index: 35; top: calc(100% + 5px); left: 0;
+  width: max(100%, 255px); max-width: min(85vw, 350px);
+  display: grid; gap: 13px; padding: 16px;
+  background: #1c3030; border: 1px solid #658278;
+  box-shadow: 0 16px 32px #020b0caa;
+}
+.sdn-filter-popover label { display: flex; flex-direction: column; gap: 8px; }
+.sdn-filter-popover select { width: 100%; }
+@media (max-width: 900px) {
+  .sdn-directory-filters,
+  .sdn-directory-filters:not(.sdn-report-filters),
+  .sdn-report-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sdn-directory-filters > .sdn-search-label { grid-column: 1 / -1; }
+}
+@media (max-width: 580px) {
+  .sdn-directory-filters,
+  .sdn-directory-filters:not(.sdn-report-filters),
+  .sdn-report-filters { grid-template-columns: 1fr; }
+  .sdn-directory-filters > .sdn-search-label { grid-column: auto; }
+  .sdn-filter-popover { max-width: calc(100vw - 90px); }
+}
+/* Die Abschnittsnummer ist selbst die Überschrift, ohne redundante zweite Zeile. */
+.sdn-aktenblatt .sdn-ability-header { margin-bottom: 16px; padding-bottom: 14px; }
+.sdn-aktenblatt .sdn-ability-header h4 {
+  margin: 0; font: 850 clamp(20px, 2.3vw, 27px)/1.18 var(--title);
+  text-transform: uppercase; letter-spacing: .02em;
+}
+/* Der Charakterkanal sitzt ganz rechts in der Informationszeile. */
+.sdn-aktenblatt .sdn-head-info .sdn-head-channel {
+  margin-left: auto;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+@media (max-width: 520px) {
+  .sdn-aktenblatt .sdn-head-info .sdn-head-channel { margin-left: auto; }
+}

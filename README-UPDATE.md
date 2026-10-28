@@ -1,35 +1,27 @@
-# SDN v0.22 – Aktenkopf, Skillmatrix und einheitliche Kacheln
+# SDN v0.23 – Navigation, Filter und Fähigkeiten
 
-Dieses Paket ist ein **Frontend-Update** für die bestehende produktive SDN-Website auf Basis von **v0.21**. Es enthält **keine** Datenbankmigration, kein neues Backend und keine Zugangsschlüssel.
+Dieses Paket ist ein Oberflächenupdate auf Basis der Produktivdateien aus v0.21 plus den v0.22-Anpassungen. **Kein neues SQL und keine Edge Functions erforderlich.**
 
 ## Installation
 
-1. **Backup:** Vorhandene `app.js` und `styles.css` des GitHub-Repositories `timan52/SDN` sichern oder den aktuellen Git-Commit als Rücksetzpunkt festhalten.
-2. **Dateien ersetzen:** Im Stammverzeichnis des Repositories die bestehenden Dateien `app.js` und `styles.css` durch die beiden gleichnamigen Dateien aus diesem Paket ersetzen. Bitte **beide zusammen** übernehmen.
-3. **Veröffentlichen:** Änderungen auf dem `main`-Branch committen und zu GitHub pushen. Die GitHub-Pages-Veröffentlichung abwarten.
-4. **Kontrolle:** `https://timan52.github.io/SDN/` mit `Strg + Umschalt + R` neu laden und die Ansicht mit dem Discord-Account überprüfen.
+1. Vor der Änderung die aktuellen `index.html`, `app.js` und `styles.css` aus deinem Repository sichern (oder einen Git-Commit/Branch als Wiederherstellungspunkt anlegen).
+2. Die drei gleichnamigen Dateien aus diesem ZIP in das Stammverzeichnis deines GitHub-Repositories `timan52/SDN` übernehmen. Wenn du zwischenzeitlich eigene Änderungen an diesen Dateien vorgenommen hast, diese Änderungen bitte zusammenführen statt blind überschreiben.
+3. `config.js`, `backend.js`, `portrait-editor.js`, `supabase/`, Secrets, GitHub-Bilder und die Datenbank nicht verändern.
+4. Änderungen auf `main` committen / pushen, GitHub Pages veröffentlichen lassen, anschließend `https://timan52.github.io/SDN/` mit `Strg + Umschalt + R` neu laden.
 
-**Nicht ändern:** `index.html`, `config.js`, `backend.js`, `portrait-editor.js`, Supabase, Edge Functions, SQL-Migrationen, Portraitdateien und Discord-Einstellungen.
+## Was sich geändert hat
 
-## Umgesetzte Änderungen
+- **Nur eine Scrollleiste:** Das Haupt-Dokument wächst jetzt mit den Kacheln. Die bisherigen eigenen Scrollcontainer für Helden und Einsätze sind entfernt. Nach dem Zurück-Pfeil wird die vorherige Position auf der Seite wiederhergestellt.
+- **Heldenübersicht:** Ein sichtbares Menü **FILTER** statt der zwei nebeneinanderliegenden Bereiche Anzeige / Position. Innerhalb des Menüs bleiben beide Auswahlen kombinierbar. Die Texte heißen nun **Alle Charaktere** und **Meine Charaktere**.
+- **Einsatzarchiv:** Ein sichtbares Menü **FILTER** statt Anzeige / Fallstatus. Innerhalb des Menüs können beide weiterhin kombiniert werden.
+- **Fähigkeiten:** Ausschließlich **01 / SPEZIALFÄHIGKEIT** und **02 / ALLGEMEINES PROFIL** als Bereichsüberschriften, ohne die redundanten Titel. Unter der Spezialfähigkeit heißt das Feld jetzt **NACHTEIL/EINSCHRÄNKUNG/SCHWÄCHE**.
+- **Aktenkopf:** Der Link **↗ CHARAKTERKANAL** steht in der Kopfinformationszeile ganz rechts, soweit er für den Charakter hinterlegt ist.
 
-- **Identität:** `Geschlecht` aus dem Aktenkopf entfernt. Der Wert wird stattdessen einmalig unter **Identität → Personendaten** angezeigt; das Formularfeld bleibt bestehen.
-- **Skillmatrix:** Combat wird als Faust, Mobility als laufende Person, Charisma als Sprechblase angezeigt. Symbole für Vigor (Schild) und Intellect (Gehirn) bleiben erhalten. Textbezeichnungen und Werte der Balken bleiben unverändert.
-- **Register:** In Aktenblättern werden Register bei wenig Platz automatisch auf mehrere Zeilen umgebrochen. Keine horizontale Register-Scrollleiste.
-- **Heldenkacheln:** Profilbilder bleiben im Format **4:5**. Der Informationsbereich jeder Kachel hat unabhängig von der Textlänge dieselbe Höhe. Lange Heldennamen/Spielernamen werden bei Bedarf auf zwei Zeilen begrenzt.
-- **Einsatzkacheln:** Alle Kacheln haben eine feste Höhe. Die Titel und andere zu lange Texte werden auf eine sinnvolle Zeilenanzahl begrenzt und nicht über benachbarte Kacheln ausgedehnt. Die vollständigen Angaben sind in der Detailansicht weiterhin vorhanden.
-- **Reihenfolge in Einsatzkacheln:** Fallstempel, Einsatzname, Datum/Ort/Kundenname (ohne `KUNDE:`), Einsatzlevel, **DISPATCHER:** vor **TEAM:**, gegebenenfalls Kundensterne und SL-Freigabestatus. `DISPATCHER:` und `TEAM:` sind beide fett, die Namen haben dieselbe normale Schriftstärke.
-- **Unverändert:** Reiterinhalt, Formulare, Speicherung, Freigaben, IDs, Rollen und Bilder.
+## Prüfung
 
-## Testempfehlung
+- JavaScript-Syntax (`node --check`) erfolgreich.
+- Lokaler Browser-Smoke-Test mit simulierten Serverdaten: Filter (auch in Kombination), Übersichtsnavigation und die beiden Fähigkeitenüberschriften funktionieren ohne Skriptfehler.
+- Separater Chromium-CSS-Test mit 50 Einsatzkacheln: Der Kachelcontainer hat `overflow-y: visible`, keine eigene Scrollhöhe, und nur das Browserdokument wird länger.
+- Responsive Test mit schmalem Viewport (390 px): kein horizontales Überlaufen.
 
-1. Eine Personalakte öffnen: Geschlecht nur unter Personendaten sichtbar, Kopf enthält weiterhin Discord-Spielername und ggf. Charakterkanal.
-2. Skillmatrix öffnen: fünf Symbole und unveränderte Bezeichnungen in den Balken prüfen.
-3. Browser verkleinern: Reiter umbrechen statt horizontal zu scrollen.
-4. Mehrere Helden mit unterschiedlich langen Aliasnamen und mehrere Einsätze mit unterschiedlich langen Teamlisten anschauen: Kartenhöhen bleiben gleich.
-5. Einsatz mit Dispatcher, Team und Kunde öffnen: Kundenname nach dem Ort unter dem Titel; Dispatcher steht vor Team.
-6. Als normaler Spieler und als SL prüfen, dass Status und Freigaben weiterhin korrekt angezeigt werden.
-
-## Hinweise
-
-Die Vorschau wurde in einer isolierten Chromium-Testseite mit **simulierten** Helden und Einsätzen auf Desktop und Mobilgeräten geprüft. Es erfolgte **kein** Zugriff auf dein laufendes Supabase-Projekt. Bei langen Namen wird in der Kachel bewusst gekürzt; der vollständige Text bleibt in der Detailansicht und für Screenreader erhalten.
+**Nicht live geprüft:** GitHub Pages, dein Discord-Account und dein Supabase-Projekt. Bitte nach Installation mit deinen realen Daten kurz testen.
