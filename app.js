@@ -137,10 +137,10 @@
     const values=STAT_KEYS.map(([k])=>Number(c.stats[k]||0));
     const ticks=values.map((v,i)=>{const [x,y]=pt(i,v);return `<circle cx="${x}" cy="${y}" r="4.5" fill="#ff9241" stroke="#253932" stroke-width="1.5"/>`}).join('');
     const icons=[
-      '<path d="M-9 -2h18M-11 -6v8M-7 -9v14M7 -9v14M11 -6v8"/>',
+      '<rect x="-11" y="-9" width="22" height="14" rx="4"/><path d="M-6 -9v7M0 -9v7M6 -9v7M-7 5v7H7V5M-11 -2c-3 2-3 6 0 8l4 2"/>',
       '<path d="M0 -12l9 3v8c0 6-5 9-9 12-4-3-9-6-9-12v-8z"/>',
-      '<path d="M-11 3l7-6 5 3 6-9M2 -9h5v5"/>',
-      '<path d="M-10 -8h20v17H-10zM-7 -4h14M-7 1h9M-7 5h14"/>',
+      '<circle cx="-1" cy="-10" r="2.5"/><path d="M-3 -5l5 4 5-1 4 3M2 -1l-4 6-7 4M2 -1l2 6 6 5M-3 -4l-8 2"/>',
+      '<path d="M-10 -8h20a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H0l-7 5V7h-3a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3z"/><path d="M-6 -2h12M-6 2h8"/>',
       '<path d="M0 -11c-5-3-10 1-10 5-4 3-2 9 3 10 0 5 7 7 7 3 0 4 7 2 7-3 5-1 7-7 3-10 0-4-5-8-10-5v18M-8 -2l5 3M8 -2L3 1"/>'
     ];
     const labels=STAT_KEYS.map(([key,label],i)=>{const a=-Math.PI/2+2*Math.PI*i/5;const x=cx+Math.cos(a)*150,y=cy+Math.sin(a)*136;return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})" class="sdn-radar-symbol" aria-label="${safe(label)}"><title>${safe(label)}</title>${icons[i]}</g>`}).join('');
@@ -154,7 +154,9 @@
     const closed=caseState(r)==='closed';
     const badge=cardApproval(r.status==='pending',r.status==='approved',r.submittedByMe,r.status==='rejected');
     const dispatcher=reportDispatcher(r);
-    return `<button type="button" class="mission-card sdn-case-card sdn-case-clickable" data-open-report="${safe(r.id)}" aria-label="Einsatzprotokoll ${safe(r.title)} öffnen"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><h3>${safe(r.title)}</h3>${reportLevelBadge(r)}<div class="mission-card-meta">${safe(r.date||r.startDate)} · ${safe(r.location||'Ohne Ortsangabe')}</div>${r.customer?`<p class="sdn-case-extra">KUNDE: ${safe(r.customer)}</p>`:''}<p class="sdn-case-heroes"><strong>TEAM:</strong> ${heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten'}</p>${dispatcher?`<p class="sdn-case-dispatcher">DISPATCHER: ${safe(dispatcher.alias)}</p>`:''}${customerRatingHtml(r)}<div class="sdn-card-approval">${badge}</div></button>`;
+    const team=heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten';
+    const meta=[safe(r.date||r.startDate),safe(r.location||'Ohne Ortsangabe'),...(r.customer?[safe(r.customer)]:[])].filter(Boolean).join(' · ');
+    return `<button type="button" class="mission-card sdn-case-card sdn-case-clickable" data-open-report="${safe(r.id)}" aria-label="Einsatzprotokoll ${safe(r.title)} öffnen"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><h3>${safe(r.title)}</h3><div class="mission-card-meta" title="${meta}">${meta}</div>${reportLevelBadge(r)}<div class="sdn-case-people">${dispatcher?`<p class="sdn-case-person-row" title="${safe(dispatcher.alias)}"><strong>DISPATCHER:</strong> <span>${safe(dispatcher.alias)}</span></p>`:''}<p class="sdn-case-person-row" title="${team}"><strong>TEAM:</strong> <span>${team}</span></p></div>${customerRatingHtml(r)}<div class="sdn-card-approval">${badge}</div></button>`;
   }
   function tabContent(c){
     switch(activeTab){
@@ -166,6 +168,7 @@
         return `<div class="sdn-section-intro"><small>01 / PERSONENDATEN</small><h3>Identität</h3></div><div class="sdn-doc-grid">
           <div class="sdn-doc-column"><section class="sdn-paper-card"><h4>PERSONENDATEN</h4><div class="sdn-fact-lines">
             ${recordPair('BÜRGERLICHER NAME',civil)}
+            ${recordPair('GESCHLECHT',({male:'Männlich',female:'Weiblich',diverse:'Divers'})[c.sex]||c.sex)}
             ${recordPair('GEHEIME IDENTITÄT',c.hasSecretIdentity==='yes'?'Ja':c.hasSecretIdentity==='no'?'Nein':'')}
             ${recordPair('ALTER',c.age)}${recordPair('GEBURTSTAG',c.birthday)}${recordPair('GEBURTSORT',c.birthplace)}
             ${recordPair('GRÖSSE',c.height)}${recordPair('GEWICHT',c.weight)}</div></section>
@@ -232,7 +235,7 @@
       <div class="paper-mast"><div><div class="paper-wordmark">S<span>D</span>N</div><small>SUPERHERO DISPATCH NETWORK / PERSONNEL DIVISION</small></div><div class="paper-serial">PERSONALAKTE <b>${safe(c.sdnId)}</b></div></div>
       <div class="file-main"><div class="sdn-head-layout"><div class="portrait-container ${publicPortrait?'':'placeholder'}">${publicPortrait?`<img src="${safe(publicPortrait)}" alt="Portrait von ${safe(c.alias)}" />`:`<span>${safe((c.alias||'?')[0])}</span>`}</div>
       <div class="sdn-head-data"><div class="eyebrow">PERSONALAKTE / ${safe(c.sdnId)}</div><div class="file-titleline"><div><h2>${safe(c.alias)}</h2><div class="sdn-head-badges"><span class="sdn-record-position sdn-position-${positionClass(c)}">${show(c.role)}</span>${activityBadge(c)}</div></div><div class="classification approval-stamp ${safe(c.status)}">${statusText(c.status)}</div></div>
-        <div class="sdn-head-info"><div><small>GESCHLECHT</small><strong>${show(({male:'Männlich',female:'Weiblich',diverse:'Divers'})[c.sex]||c.sex)}</strong></div><div><small>SPIELER (DISCORD)</small><strong>${safe(ownerName(c))}</strong></div>${channelLink?`<div class="sdn-head-channel">${channelLink}</div>`:''}</div>
+        <div class="sdn-head-info"><div><small>SPIELER (DISCORD)</small><strong>${safe(ownerName(c))}</strong></div>${channelLink?`<div class="sdn-head-channel">${channelLink}</div>`:''}</div>
       </div></div></div>${publishWarning}
       <nav class="paper-tabs" aria-label="Abschnitte der Personalakte" role="tablist">${tabs.map(([id,label])=>`<button class="paper-tab ${activeTab===id?'active':''} ${id==='secret'?'secret-tab':''}" type="button" role="tab" data-tab="${id}" aria-selected="${activeTab===id}">${label}</button>`).join('')}</nav>
       <section class="tab-content" role="tabpanel">${tabContent(c)}</section><div class="file-bottom"><span>SDN / ${safe(c.sdnId)}</span><span>INOFFIZIELLES DISPATCH-FANPROJEKT</span></div>

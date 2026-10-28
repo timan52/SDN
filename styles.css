@@ -812,3 +812,123 @@ html,body{max-width:100%;overflow-x:clip}
 .sdn-aktenblatt .paper-tabs{flex-wrap:nowrap!important;justify-content:flex-start;scroll-behavior:smooth}
 .sdn-aktenblatt .paper-tab{flex:0 0 auto;min-width:max-content}
 .sdn-head-badges .sdn-record-position{color:var(--sdn-card-accent,#516964)}
+
+
+/* SDN v0.22 – Aktenregister umbrechen, einheitliche Kacheln und Lesbarkeit */
+/* Die Register belegen mehrere Zeilen statt horizontal zu scrollen. */
+.sdn-aktenblatt .paper-tabs {
+  display: flex;
+  flex-wrap: wrap !important;
+  justify-content: flex-start;
+  gap: 1px;
+  overflow: visible !important;
+  scroll-behavior: auto;
+  scrollbar-width: none;
+  background: #cec5b6;
+  padding: 1px clamp(8px, 2vw, 28px) !important;
+}
+.sdn-aktenblatt .paper-tab {
+  flex: 1 1 125px;
+  min-width: 0;
+  max-width: none;
+  white-space: normal;
+  overflow-wrap: break-word;
+  min-height: 48px;
+  text-align: center;
+  background: #ded8cb;
+}
+@media (max-width: 600px) {
+  .sdn-aktenblatt .paper-tab { flex-basis: 108px; padding: 12px 7px; }
+}
+@media print {
+  .sdn-aktenblatt .paper-tabs { display: none !important; }
+}
+/* Portrait bleibt 4:5, die darunterliegenden Heldeninfos haben eine feste Höhe. */
+.sdn-directory-grid { align-items: stretch; }
+.sdn-directory-card { align-self: stretch; height: auto; }
+.sdn-dir-details {
+  box-sizing: border-box;
+  flex: 0 0 185px;
+  height: 185px;
+  min-height: 185px;
+  max-height: 185px;
+  overflow: hidden;
+  gap: 6px;
+}
+.sdn-dir-details > strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  max-height: 2.3em;
+  min-height: 1.1em;
+}
+.sdn-dir-details > small {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  max-height: 2.8em;
+}
+.sdn-dir-details .sdn-card-approval { min-height: 33px; }
+/* Einsatzkacheln haben unabhängig von Inhalt dieselbe Höhe und Textreihenfolge. */
+#missionsView .missions-catalog { align-items: start; }
+.sdn-case-card,
+.mission-cards.embedded .sdn-case-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 346px;
+  min-height: 346px;
+  max-height: 346px;
+  padding: 60px 16px 14px !important;
+  overflow: hidden;
+}
+.sdn-case-card > .sdn-case-stamp { flex-shrink: 0; }
+.sdn-case-card h3 {
+  margin: 0 0 7px;
+  min-height: 2.25em;
+  max-height: 2.25em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.sdn-case-card .mission-card-meta {
+  margin: 0 0 7px;
+  line-height: 1.4;
+  min-height: 2.8em;
+  max-height: 2.8em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.sdn-case-card > .sdn-report-level { flex-shrink: 0; margin: 0 0 10px; }
+.sdn-case-card .sdn-case-people { min-height: 0; overflow: hidden; }
+.sdn-case-card .sdn-case-person-row,
+.mission-cards.embedded .sdn-case-person-row {
+  color: #c4d7d0 !important;
+  font: 400 11px/1.5 monospace;
+  letter-spacing: .025em;
+  margin: 0 0 4px !important;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.sdn-case-card .sdn-case-person-row strong {
+  font-weight: 800;
+  color: #f1ede0;
+}
+.sdn-case-card .sdn-customer-stars { margin-top: auto; flex-shrink: 0; }
+.sdn-case-card .sdn-card-approval { margin-top: auto; flex-shrink: 0; padding-top: 7px; min-height: 27px; }
+@media (max-width: 500px) {
+  .sdn-case-card,
+  .mission-cards.embedded .sdn-case-card { height: 346px; min-height: 346px; max-height: 346px; }
+}
