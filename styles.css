@@ -615,3 +615,57 @@ html,body{max-width:100%;overflow-x:clip}
 .report-no-dispatcher{color:#63786e;font-size:13px;margin:8px 0;}
 @media(max-width:1000px){.sdn-directory-filters:not(.sdn-report-filters){grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:600px){.sdn-directory-filters:not(.sdn-report-filters){grid-template-columns:1fr;}}
+
+
+/* SDN v0.15 — identical operation tiles in archive and personnel files */
+.mission-cards.embedded {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+  gap: 15px;
+  align-items: stretch;
+}
+.mission-cards.embedded .sdn-case-card {
+  width: 100%; height: 100%;
+  min-height: 205px;
+  background: #1b2c2c;
+  border: 1px solid #456055;
+  color: #f2f1e6;
+  text-align: left;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.mission-cards.embedded .sdn-case-card:hover,
+.mission-cards.embedded .sdn-case-card:focus-visible {
+  transform: translateY(-3px);
+  background: #213732;
+  border-color: #eda462;
+  outline: none;
+}
+.mission-cards.embedded .sdn-case-card:focus-visible {
+  outline: 2px solid #eda462;
+  outline-offset: 2px;
+}
+.mission-cards.embedded .sdn-case-heroes,
+.mission-cards.embedded .sdn-case-extra,
+.mission-cards.embedded .sdn-case-dispatcher,
+.mission-cards.embedded .mission-card-meta {
+  color: #c4d7d0 !important;
+}
+.mission-cards.embedded .sdn-card-approval { margin-top: auto; }
+.mission-cards.embedded .sdn-customer-stars {
+  color: #f4bc65;
+  background: rgba(179,115,47,.12);
+  border-color: rgba(239,174,93,.38);
+}
+/* The same card HTML is used in both places; IDs are deliberately not shown. */
+.sdn-case-card .mission-card-top:empty { display:none; }
+/* Rating controls remain discoverable even while case status is open. */
+.sdn-customer-review.is-disabled { background: #e1e4d9; border-color: #b6c0b5; }
+.sdn-customer-review.is-disabled label { opacity: .6; }
+.sdn-review-heading { display:flex; gap:12px; justify-content:space-between; align-items:center; flex-wrap:wrap; font:800 11px/1.4 monospace; color:#344e43; }
+.sdn-review-heading span { font-size:10px; color:#a5743c; }
+.sdn-star-preview { color:#a96d30; font:800 25px/1.4 system-ui,sans-serif; letter-spacing:.07em; }
+.sdn-customer-review.is-disabled .sdn-star-preview { opacity:.45; }
+.sdn-stars-unrated { color:#6f7769; background:#e1e0d3; border-color:#bcbcae; font:700 11px/1.5 monospace; }
+.sdn-stars-unrated strong { font-weight:900; }
+@media(max-width:600px){
+  .mission-cards.embedded { grid-template-columns: 1fr; }
+}
