@@ -1,36 +1,33 @@
-# SDN v0.10.1 – Einheitliche Kacheln & vereinfachte Kopfzeile
+# SDN-Personalakten v0.11 – Formulare und Datenbankregeln
 
-Dieses Update baut auf der **bereits installierten v0.10** auf. Bestehende Charaktere, Einsätze, Portraits, Tickets, Berechtigungen und Aktennotizen bleiben unverändert.
+Dieses Paket ist ein **Update für eine bereits eingerichtete v0.10.1-Website**. Es ist keine Neuinstallation. Vorhandene Charaktere, freigegebene Portraits, Änderungstickets, Einsatzprotokolle und Aktennotizen bleiben erhalten. Bestehende alte Felder werden nicht aus der Datenbank gelöscht, nur nicht mehr im neuen Formular gezeigt.
 
-## Änderungen
+## Was neu ist
 
-- Die kleinen Pfeile rechts oben sind aus Helden- und Einsatzkacheln entfernt. Die ganze Kachel bleibt anklickbar.
-- Einsatzkacheln erhalten denselben weichen Rahmen, Hintergrund und 3-Pixel-Hoverhub wie Heldenkacheln; der Fallstatus-Stempel bleibt erhalten.
-- Die Zähler `ALLE BERICHTE`, `OFFENE FÄLLE` und `ABGESCHLOSSEN` sind aus der Einsatzübersicht entfernt. Die Fallstatus-Filter bleiben weiterhin verfügbar.
-- Der dekorative Stempel `SDN PERSONNEL RECORDS` im Seitenkopf entfällt.
-- Die zusätzliche orange Sicherheitsinformationsleiste `GESCHÜTZTES ARCHIV` entfällt. **Die Authentifizierung, serverseitige Discord-Mitgliedschaftsprüfung und Datenbankrechte bleiben unverändert.**
-- Rechts oben steht nun nach erfolgreicher Anmeldung der im Server verifizierte Discord-Anzeigename (inklusive Server-Spitzname, sofern vorhanden), sonst wird dieser Bereich ausgeblendet. Der Name wird als reiner Text eingefügt.
+**Personalakten:** SDN-ID weiterhin automatisch und zufällig in der Datenbank, Discord-Spieler über die verifizierte Besitzer-ID automatisch zugeordnet. Positionen: Superheld, Dispatcher, Teamleiter, Manager, Standortleitung, Techniker, Arzt. Geheime Identität Ja/Nein statt Blutgruppe. Geschlecht und Fähigkeitsklasse als Auswahl (männlich/weiblich/divers und E–S). Feldbezeichnungen geändert; zusätzliche allgemeine Stärken, allgemeine Schwächen, allgemeine Fähigkeiten, Likes und Dislikes. Entfernt: Zeitpunkt, ärztliche Vermerke, Personalnotizen; TOP SECRET ist ein einziges Freitextfeld, ausschließlich für die SL. Beziehungen erst bei bereits freigegebener Akte. Portrait-Hinweis mit Limit 1 MB, kein Ganzkörperbild und Verweis auf die Server-Bildrichtlinien; der Platz für das künftig gelieferte Musterbild ist reserviert. Formularabschluss: ANMERKUNG ZUM ANTRAG und ABSENDEN.
 
-## Installation (nur Website-Dateien)
+**Attribute:** 0,5 bis 10 in 0,5er-Schritten. Beim **Erstellen** höchstens 15 Punkte insgesamt und höchstens 6 je Attribut; bei **Änderungen** höchstens 27 Punkte insgesamt und höchstens 10 je Attribut. SL kann bei neuen Akten Werte leer lassen; sie erscheinen als „Keine Daten vorhanden“. Auf Datenbankebene werden die Regeln ebenfalls geprüft.
 
-1. Die bestehenden Dateien im lokalen GitHub-Repository sichern oder committen.
-2. Im **Stammverzeichnis** des GitHub-Repositories `timan52/SDN` diese vier Dateien durch die Versionen aus dem ZIP ersetzen:
-   - `index.html`
-   - `app.js`
-   - `backend.js`
-   - `styles.css`
-3. Alle anderen Dateien **unverändert** lassen, insbesondere `config.js`, `portrait-editor.js`, `portraits/`, `supabase/` und `.env`.
-4. Änderungen auf `main` committen und pushen.
-5. Unter https://timan52.github.io/SDN/ die Seite mit **Strg + Umschalt + R** aktualisieren.
+**Einsätze:** ABSCHLUSS / ERGEBNIS steht vor den Datumfeldern und steuert das Einsatzende. Einsatzbeginn ersetzt Einsatzdatum, Einsatzende nur bei abgeschlossenem Fall. Einsatzort bezeichnet den Discord-RP-Channel, zusätzlicher Nachrichtenlink „Link zum RP“. Alle freigegebenen Helden auswählbar, auch die anderer Spieler. Kein gesondertes Fallstatus-Feld; der Status wird aus dem Ergebnis abgeleitet. Schadensbericht erst bei Ja für betroffene zivile Infrastruktur. Anmerkung zum Antrag optional und Button ABSENDEN. Kompatibilität mit früheren Einsätzen bleibt durch das `date`-Feld erhalten.
 
-**Kein neues SQL-Skript und kein Edge-Function-Deploy erforderlich.** Die Quelle des Discord-Anzeigenamens ist die bereits in v0.8 eingerichtete Tabelle `sdn_discord_profiles`, die durch `verify-discord` aktualisiert wird.
+## Installation – Reihenfolge einhalten
 
-## Überprüfung
+1. **Sichern:** Sichere oder committe deine derzeitigen lokalen Dateien. Für die Datenbank kannst du vor der Migration einen Datenexport über Supabase durchführen.
+2. **SQL aktualisieren:** Öffne in Supabase den **SQL Editor**. Öffne die Datei `supabase/migrations/202610280003_form_rules.sql` in einem Texteditor und kopiere **deren vollständigen SQL-Inhalt** in einen neuen SQL-Editor-Eintrag. Klicke auf Run. **Nicht nur den Dateipfad hineinkopieren!** Voraussetzung: Die Migrationen aus v0.8 und v0.10 wurden bereits ausgeführt.
+3. **GitHub:** Ersetze im Stammverzeichnis des Repositories `timan52/SDN` nur `index.html`, `app.js` und `styles.css` durch die drei Dateien dieses Updates. Nicht `config.js`, `backend.js`, `portrait-editor.js`, `.env`, Bilder oder die anderen Dateien ersetzen.
+4. Committe die Dateien auf `main` und pushe sie. GitHub Pages sollte die Website unter `https://timan52.github.io/SDN/` aktualisieren.
+5. Im Browser mit **Strg + Umschalt + R** aktualisieren und als SL sowie mit einem normalen Discord-Account prüfen.
 
-1. In der Heldenübersicht eine Kachel mit der Maus überfahren: sie hebt sich leicht an. Kein Pfeil oben rechts.
-2. In der Einsatzübersicht eine Kachel überfahren: derselbe Effekt. Der gesamte Kachelbereich öffnet das Einsatzprotokoll. Keine drei Zähler oberhalb der Filter.
-3. Oben sind die Informationsleiste und der dekorative Stempel verschwunden.
-4. Nach Discord-Login wird oben rechts dein verifizierter Discord-Anzeigename gezeigt, sofern verfügbar; sonst bleibt dieser Bereich leer. **Auf schmalen Bildschirmen wird der Name aus Platzgründen ausgeblendet.**
-5. Kontrollieren, dass Suche, Filter, Zurück-Pfeile, Freigaben und Aktennotizen weiterhin funktionieren.
+## Wichtige Tests
 
-Diese Änderung betrifft ausschließlich die Benutzeroberfläche und die Anzeige bereits verifizierter Nutzerinformationen. Noch keine Live-Tests mit den Konten des RP-Servers durchgeführt.
+1. **Spieler:** Beim Erstellen keine ID- oder Spieler-Eingabe; Position, Geheime Identität, Geschlecht auswählbar; Punktwerte in Halbschritten. 15,5 Gesamtpunkte beziehungsweise ein Attribut mit 6,5 werden abgelehnt.
+2. **SL:** Neue Akte mit leeren freiwilligen Angaben und leeren Attributen anlegen; nach Freigabe erscheint „Keine Daten vorhanden“. TOP SECRET ist für die SL sichtbar und bearbeitbar, für normale Spieler nicht. Berechtigungen müssen auch bei direktem DB-Zugriff gesperrt sein.
+3. **Beziehungen:** In der Erstellungsmaske keine Bekanntschaften; erst nach der Freigabe verfügbar.
+4. **Einsatz:** Solange „Noch offen“ gewählt ist, ist Einsatzende deaktiviert. Bei abgeschlossenem Ergebnis wird es Pflicht. Ein Schadensbericht ist nur bei betroffener ziviler Infrastruktur freigeschaltet. Die optionalen Anmerkungen werden im eingereichten Bericht angezeigt.
+5. Bestehende Akten und Einsätze weiterhin öffnen und in den Detailansichten anzeigen.
+
+## Was bewusst noch aussteht
+
+Das angekündigte Musterbild für den Portrait-Hinweis wurde noch nicht geliefert. Bis dahin steht dort ein beschrifteter Platzhalter. Nach Erhalt des Bildes lässt er sich ersetzen, ohne das Datenmodell erneut zu ändern.
+
+**Hinweis:** Die Browseroberfläche wurde mit simulierten Spielersitzungen geprüft. Die tatsächliche SQL-Migration und die Rechteprüfung auf deinem Supabase-Projekt konnten hier nicht live getestet werden. Daher das Update nach Möglichkeit zuerst mit einem Testcharakter prüfen.

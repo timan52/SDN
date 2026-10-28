@@ -519,3 +519,12 @@ html,body{max-width:100%;overflow-x:clip}
   /* The compact header reserves space for the sign-out control. */
   .session-marker { display: none !important; }
 }
+
+/* SDN v0.11 – ein Portrait mit Referenzplatzhalter und bedingte Eingaben */
+.sdn-portrait-reference{margin-top:15px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.sdn-portrait-reference-placeholder{width:112px;aspect-ratio:4/5;display:grid;place-content:center;text-align:center;border:1px dashed #86968a;background:#34463d;color:#f2dfc1;font:700 11px/1.6 monospace;letter-spacing:.04em}
+.sdn-portrait-reference-placeholder small{color:#b9cbbe;font-size:9px}
+.sdn-portrait-reference p{max-width:275px;font-size:12px;color:#a9bfb2}
+.mission-dialog input:disabled,.mission-dialog textarea:disabled{opacity:.45;cursor:not-allowed;background:#d4d6ca;color:#778578}
+.report-rp-link{display:inline-flex;margin:18px 0;padding:10px 14px;border:1px solid #607e6d;color:#30483b;font:800 11px monospace;text-decoration:none}
+.report-rp-link:hover{border-color:#d47b3b}

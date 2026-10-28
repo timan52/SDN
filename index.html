@@ -36,7 +36,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg>
         </button>
       </div>
-      <div class="rail-bottom" title="Mitgliederportal">v0.10.1<span>●</span></div>
+      <div class="rail-bottom" title="Mitgliederportal">v0.11<span>●</span></div>
     </aside>
 
     <div class="main-column">
@@ -82,9 +82,9 @@
       <header class="dialog-header"><div><span class="eyebrow">PERSONNEL DATA ENTRY</span><h2 id="dialogTitle">AKTE BEARBEITEN</h2></div><button type="button" class="dialog-close" id="closeDialog" aria-label="Schließen">×</button></header>
       <div class="dialog-body">
         <p class="dialog-description"><strong>Vorschlag statt Direktänderung:</strong> Bearbeite beliebige Abschnitte. Erst nach Genehmigung durch die Spielleitung werden die Änderungen in der Akte sichtbar. Änderungen an Attributen oder Kräften werden besonders markiert.</p><div class="pending-edit-warning" id="pendingEditWarning" hidden>WEITERE TICKETS KÖNNEN JEDERZEIT EINGEREICHT WERDEN.</div>
-        <div id="editFields"></div><div class="ticket-explanation"><label for="proposalComment">ANMERKUNG ZUM ÄNDERUNGSANTRAG <span>OPTIONAL</span></label><textarea id="proposalComment" maxlength="1500" rows="3" placeholder="z. B. Ich habe die Fähigkeit wie besprochen angepasst. / Neuer Portraitausschnitt."></textarea><p>Alle Änderungen dieses Formulars bilden <strong>ein eigenes Ticket</strong>. Du kannst mehrere Tickets einreichen, auch solange andere noch geprüft werden.</p></div><p id="formError" class="form-error" role="alert"></p>
+        <div id="editFields"></div><div class="ticket-explanation"><label for="proposalComment">ANMERKUNG ZUM ANTRAG <span>OPTIONAL</span></label><textarea id="proposalComment" maxlength="1500" rows="3" placeholder="z. B. Ich habe die Fähigkeit wie besprochen angepasst. / Neuer Portraitausschnitt."></textarea><p>Alle Änderungen dieses Formulars bilden <strong>ein eigenes Ticket</strong>. Du kannst mehrere Tickets einreichen, auch solange andere noch geprüft werden.</p></div><p id="formError" class="form-error" role="alert"></p>
       </div>
-      <footer class="dialog-footer"><button class="dialog-secondary" id="cancelEdit" type="button">ABBRECHEN</button><button class="dialog-primary" id="submitEdit" type="submit">ÄNDERUNGEN ABSENDEN ↗</button></footer>
+      <footer class="dialog-footer"><button class="dialog-secondary" id="cancelEdit" type="button">ABBRECHEN</button><button class="dialog-primary" id="submitEdit" type="submit">ABSENDEN</button></footer>
     </form>
   </dialog>
 
@@ -95,19 +95,19 @@
         <p class="dialog-description">Standardisiertes Einsatzprotokoll. Neue Berichte sind zuerst <strong>zur Freigabe eingereicht</strong>. Erst nach Genehmigung erscheinen sie in den verknüpften Personalakten.</p>
         <div class="form-grid">
           <label class="span2">EINSATZBEZEICHNUNG *<input name="title" maxlength="100" required placeholder="z. B. Zwischenfall am Hafen" /></label>
-          <label>EINSATZDATUM *<input name="date" type="date" required /></label><label>EINSATZORT<input name="location" maxlength="110" placeholder="Ort / Einsatzgebiet" /></label>
-          <label class="span2">BETEILIGTE HELDEN *<span class="field-hint">Mindestens einen bestehenden Charakter auswählen.</span><div class="participant-checks" id="participantChecks"></div></label>
+          <label class="span2">ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="open">Noch offen</option><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option></select></label><label>EINSATZBEGINN *<input name="startDate" type="date" required /></label><label>EINSATZENDE<input name="endDate" type="date" disabled /></label><label class="span2">EINSATZORT / DISCORD-CHANNEL<input name="location" maxlength="150" placeholder="Discord-Kanal, in dem das RP stattgefunden hat" /></label><label class="span2">LINK ZUM RP<input name="rpLink" type="url" maxlength="300" placeholder="https://discord.com/channels/…/…/…" /></label>
+          <label class="span2">BETEILIGTE HELDEN *<span class="field-hint">Du kannst alle freigegebenen Helden auswählen, auch die anderer Spieler.</span><div class="participant-checks" id="participantChecks"></div></label>
           <label>ORGANISATION<input name="organization" maxlength="130" placeholder="z. B. SDN / Organisation" /></label><label>GEGNER / SCHURKE<input name="villain" maxlength="130" placeholder="Name oder Alias" /></label>
-          <label class="span2">FALLSTATUS *<select name="caseStatus" required><option value="open">OFFEN / LAUFENDER FALL</option><option value="closed">ABGESCHLOSSEN</option></select></label>
+          
           <label class="span2">AUSGANGSLAGE *<textarea name="situation" rows="3" required maxlength="3000" placeholder="Was war bekannt? Wie kam es zur Alarmierung?"></textarea></label>
           <label class="span2">EINSATZVERLAUF *<textarea name="events" rows="5" required maxlength="5000" placeholder="Was ist in welcher Reihenfolge geschehen?"></textarea></label>
-          <label>ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option><option value="open">Noch offen</option></select></label>
+          
           <label>ZIVILE INFRASTRUKTUR BETROFFEN?<select name="damageStatus"><option value="no">Keine bekannten Schäden</option><option value="yes">Ja, Schäden entstanden</option><option value="unknown">Noch ungeklärt</option></select></label>
-          <label class="span2">SCHÄDEN AN ZIVILEN EINRICHTUNGEN<textarea name="damages" rows="3" maxlength="3000" placeholder="Gebäude, Fahrzeuge, Sachschäden, Umfang, bekannte Folgen …"></textarea></label>
+          <label class="span2">SCHADENSBERICHT<textarea name="damages" disabled rows="3" maxlength="3000" placeholder="Gebäude, Fahrzeuge, Sachschäden, Umfang, bekannte Folgen …"></textarea></label>
           <label class="span2">ZUSATZVERMERKE / BESONDERE VORKOMMNISSE<textarea name="notes" rows="3" maxlength="3000" placeholder="Zeugen, zusätzliche Hinweise, ungeklärte Punkte …"></textarea></label>
-        </div><p id="missionError" class="form-error" role="alert"></p>
+        </div><div class="ticket-explanation"><label for="missionComment">ANMERKUNG ZUM ANTRAG <span>OPTIONAL</span></label><textarea id="missionComment" maxlength="1500" rows="3" placeholder="Anmerkung für die Spielleitung …"></textarea></div><p id="missionError" class="form-error" role="alert"></p>
       </div>
-      <footer class="dialog-footer"><button class="dialog-secondary" id="cancelMission" type="button">ABBRECHEN</button><button class="dialog-primary" type="submit">ZUR PRÜFUNG EINREICHEN ↗</button></footer>
+      <footer class="dialog-footer"><button class="dialog-secondary" id="cancelMission" type="button">ABBRECHEN</button><button class="dialog-primary" type="submit">ABSENDEN</button></footer>
     </form>
   </dialog>
 
