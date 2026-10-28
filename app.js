@@ -24,8 +24,9 @@
     warning:'',changeLog:[],proposals:[]
   };
   const REPORTS = [];
-  let characters=[],reports=[],selectedId='',activeTab='identity',view='directory',filter='all',gmMode=false;
+  let characters=[],reports=[],selectedId='',activeTab='identity',view='directory',gmMode=false;
   let directoryFilter='all', directorySort='new', missionOwnership='all', missionCase='all', missionSort='new', missionSearch='';
+  let directoryScroll=0, missionScroll=0;
   let editTarget=null,editNew=false,nextChar=1,nextMission=1,nextTicket=1,reportFocus=null,missionFilter='all';
   let stagedPortrait=null, portraitPreviewUrl=null;
   const backend=window.SDNBackend;
@@ -83,16 +84,11 @@
       const applications=hasNewRequest(c), changes=hasChangeRequest(c);
       return `<button type="button" class="sdn-directory-card" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><span class="sdn-dir-id">SDN / ${safe(c.sdnId)}</span><strong>${safe(c.alias||'UNBENANNT')}</strong><small>${safe(ownerName(c))}</small><div class="sdn-dir-stamps"><span class="sdn-dir-state ${safe(c.status)}">${statusText(c.status)}</span>${gmMode&&applications?'<span class="sdn-dir-warning">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-dir-warning">ÄNDERUNGEN OFFEN</span>':''}</div></div><span class="sdn-dir-arrow">↗</span></button>`;
     }).join(''):'<div class="sdn-directory-empty">Keine Helden mit diesen Such- und Filtereinstellungen gefunden.</div>';
+    $('directoryCards').scrollTop=directoryScroll;
     $('directoryCards').querySelectorAll('[data-directory-open]').forEach(button=>button.addEventListener('click',()=>{
+      directoryScroll=$('directoryCards').scrollTop;
       selectedId=button.dataset.directoryOpen;activeTab='identity';navigate('personnel');
     }));
-  }
-  function renderRoster(){
-    const q=$('searchInput').value.toLocaleLowerCase('de').trim();
-    const filtered=characters.filter(c=>(filter==='all'||(filter==='pending'&&c.status!=='approved'&&c.status!=='draft')||c.status===filter)&&[c.alias,c.name,c.sdnId,c.role].join(' ').toLocaleLowerCase('de').includes(q));
-    $('rosterCount').textContent=String(filtered.length).padStart(3,'0')+(filtered.length===1?' FILE':' FILES');
-    $('rosterList').innerHTML=filtered.length?filtered.map(c=>`<button class="roster-card ${c.uid===selectedId?'selected':''}" data-id="${safe(c.uid)}" aria-pressed="${c.uid===selectedId}" type="button"><div class="roster-image ${c.photo?'':'placeholder'}">${c.photo?`<img src="${safe(live ? backend.imageUrl(c.photo) : c.photo)}" alt="Portrait ${safe(c.alias)}">`:`<span>${safe(c.alias[0]||'?')}</span>`}</div><div class="roster-info"><span class="roster-id">SDN-ID #${safe(c.sdnId)}</span><div class="roster-name">${safe(c.alias)}</div><span class="roster-realname">${safe(c.name)}</span><div class="roster-state ${safe(c.status)}"><i></i>${statusDescription(c.status)}</div></div><span class="roster-chevron">↗</span></button>`).join(''):'<div class="empty-roster">Keine Akte gefunden.<br>Suche oder Filter ändern.</div>';
-    document.querySelectorAll('.roster-card').forEach(button=>button.addEventListener('click',()=>{selectedId=button.dataset.id;activeTab='identity';renderAll();if(matchMedia('(max-width:860px)').matches)$('recordPanel').scrollIntoView({behavior:'smooth'});}));
   }
   const factRow=(label,value)=>`<div class="identity-item"><small>${safe(label)}</small><strong>${show(value)}</strong></div>`;
   function facts(c){return [ ['BÜRGERLICHER NAME',c.name],['HELDENALIAS',c.alias],['BERUF / ROLLE',c.role],['ORGANISATION',c.affiliation],['ALTER (LAUT AKTE)',c.age],['GRÖSSE',c.height],['GEWICHT',c.weight],['BLUTGRUPPE',c.blood],['GEBURTSORT',c.birthplace],['GEBURTSDATUM',c.birthday],['GESCHLECHT',c.sex],['SPIELER',c.player] ].map(([l,v])=>factRow(l,v)).join('');}
@@ -179,36 +175,50 @@
       }renderAll();
     }));
   }
-  function attachOpenReport(root){root.querySelectorAll('[data-open-report]').forEach(b=>b.addEventListener('click',()=>{reportFocus=b.dataset.openReport;navigate('missions');}));}
+  function attachOpenReport(root){root.querySelectorAll('[data-open-report]').forEach(b=>b.addEventListener('click',()=>{
+    const archive=$('missionCards');if(view==='missions'&&archive)missionScroll=archive.scrollTop;
+    reportFocus=b.dataset.openReport;navigate('mission-detail');
+  }));}
   function renderMissions(){
-    if(!gmMode&&missionOwnership==='pending')missionOwnership='all';
-    const q=missionSearch.toLocaleLowerCase('de').trim();
-    const visible=reports.filter(r=>{
-      const heroes=reportParticipants(r);
-      const mine=r.submittedByMe || heroes.some(c=>c.ownerId===backend?.userId);
-      const scope=missionOwnership==='mine'?mine:missionOwnership==='pending'?gmMode&&r.status==='pending':true;
-      const state=missionCase==='all'||caseState(r)===missionCase;
-      const text=[r.title,r.id,r.organization,r.villain,r.location,r.submitted,...heroes.flatMap(c=>[c.alias,c.name,c.ownerDiscord,c.ownerDiscordUsername])].join(' ').toLocaleLowerCase('de');
-      return scope&&state&&text.includes(q);
-    }).sort((a,b)=>{
-      const order=Number(new Date(b.createdAt||b.date||0))-Number(new Date(a.createdAt||a.date||0));
-      return (missionSort==='new'?order:-order)||String(a.id).localeCompare(String(b.id));
-    });
-    const selected=reportFocus&&currentMission(reportFocus);
-    const missionOptions=[['all','Alle Einsätze'],['mine','Meine Einsätze'],...(gmMode?[['pending','Offene Berichtsfreigaben (SL)']]:[])];
-    $('missionsView').innerHTML=`<div class="operations-header"><div><div class="eyebrow">OPERATIONS DIVISION / CASE FILES</div><h2>EINSATZARCHIV<span>.</span></h2><p>Durchsuchbare Einsatzakten mit Fallstatus, beteiligten Helden und SL-Freigabe.</p></div><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="mission-dashboard"><div class="mission-metrics"><div><strong>${reports.length.toString().padStart(2,'0')}</strong><span>ALLE BERICHTE</span></div><div><strong>${reports.filter(r=>caseState(r)==='open').length.toString().padStart(2,'0')}</strong><span>OFFENE FÄLLE</span></div><div><strong>${reports.filter(r=>caseState(r)==='closed').length.toString().padStart(2,'0')}</strong><span>ABGESCHLOSSEN</span></div></div><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Held, Discord, Schurke, Organisation ..." value="${safe(missionSearch)}" autocomplete="off"></label><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results">${visible.length} EINSATZAKTEN</div><div class="missions-catalog">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div><div id="missionDetail" class="mission-detail">${selected?reportDetail(selected):'<div class="detail-empty"><div>◈</div><h3>EINSATZAKTE AUSWÄHLEN</h3><p>Öffne einen Bericht aus dem Verzeichnis, um Ausgangslage, Ablauf, Schäden und Abschluss einzusehen.</p></div>'}</div>`;
-    $('newMission').addEventListener('click',openMissionDialog);
-    $('missionSearch').addEventListener('input',e=>{missionSearch=e.target.value;const caret=e.target.selectionStart;renderMissions();const next=$('missionSearch');next.focus();next.setSelectionRange(caret,caret);});
-    $('missionOwnership').addEventListener('change',e=>{missionOwnership=e.target.value;renderMissions();});
-    $('missionCase').addEventListener('change',e=>{missionCase=e.target.value;renderMissions();});
-    $('missionSort').addEventListener('change',e=>{missionSort=e.target.value;renderMissions();});
-    attachOpenReport($('missionsView'));
-    document.querySelectorAll('[data-review-report]').forEach(b=>b.addEventListener('click',async ()=>{
-      if(!gmMode)return;const [id,decision]=b.dataset.reviewReport.split(':');const r=currentMission(id);if(!r||r.status!=='pending')return;
+    const root=$('missionsView');
+    // In the detail state the archive is not mounted at all. Reviews happen here only.
+    if(view==='mission-detail'){
+      const report=reportFocus&&currentMission(reportFocus);
+      root.innerHTML=`<div class="sdn-detail-topbar"><button type="button" class="sdn-return-button" id="backMissions">← ZUR EINSATZÜBERSICHT</button><span>EINSATZAKTE / ${safe(report?.id||'—')}</span></div><div class="mission-detail">${report?reportDetail(report):'<div class="detail-empty"><h3>EINSATZAKTE NICHT GEFUNDEN</h3><p>Bitte zurück zum Einsatzarchiv wechseln.</p></div>'}</div>`;
+      $('backMissions').addEventListener('click',()=>{reportFocus=null;navigate('missions');});
+    } else {
+      if(!gmMode&&missionOwnership==='pending')missionOwnership='all';
+      const q=missionSearch.toLocaleLowerCase('de').trim();
+      const visible=reports.filter(r=>{
+        const heroes=reportParticipants(r);
+        const mine=r.submittedByMe||heroes.some(c=>c.ownerId===backend?.userId);
+        const scope=missionOwnership==='mine'?mine:missionOwnership==='pending'?gmMode&&r.status==='pending':true;
+        const state=missionCase==='all'||caseState(r)===missionCase;
+        const searchText=[r.title,r.id,r.organization,r.villain,r.location,r.submitted,...heroes.flatMap(c=>[c.alias,c.name,c.ownerDiscord,c.ownerDiscordUsername])].join(' ').toLocaleLowerCase('de');
+        return scope&&state&&searchText.includes(q);
+      }).sort((a,b)=>{
+        const order=Number(new Date(b.createdAt||b.date||0))-Number(new Date(a.createdAt||a.date||0));
+        return (missionSort==='new'?order:-order)||String(a.id).localeCompare(String(b.id));
+      });
+      const missionOptions=[['all','Alle Einsätze'],['mine','Meine Einsätze'],...(gmMode?[['pending','Offene Berichtsfreigaben (SL)']]:[])];
+      root.innerHTML=`<div class="mission-dashboard"><div class="mission-metrics"><div><strong>${reports.length.toString().padStart(2,'0')}</strong><span>ALLE BERICHTE</span></div><div><strong>${reports.filter(r=>caseState(r)==='open').length.toString().padStart(2,'0')}</strong><span>OFFENE FÄLLE</span></div><div><strong>${reports.filter(r=>caseState(r)==='closed').length.toString().padStart(2,'0')}</strong><span>ABGESCHLOSSEN</span></div></div><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Held, Discord, Schurke, Organisation ..." value="${safe(missionSearch)}" autocomplete="off"></label><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results"><span>${visible.length} EINSATZAKTEN</span><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="missions-catalog" id="missionCards" tabindex="0" aria-label="Scrollbares Einsatzarchiv">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div>`;
+      $('newMission').addEventListener('click',openMissionDialog);
+      $('missionSearch').addEventListener('input',e=>{missionSearch=e.target.value;missionScroll=0;const caret=e.target.selectionStart;renderMissions();const next=$('missionSearch');next.focus();next.setSelectionRange(caret,caret);});
+      $('missionOwnership').addEventListener('change',e=>{missionOwnership=e.target.value;missionScroll=0;renderMissions();});
+      $('missionCase').addEventListener('change',e=>{missionCase=e.target.value;missionScroll=0;renderMissions();});
+      $('missionSort').addEventListener('change',e=>{missionSort=e.target.value;missionScroll=0;renderMissions();});
+      $('missionCards').scrollTop=missionScroll;
+      attachOpenReport(root);
+    }
+    // These controls are only present in the report detail view.
+    root.querySelectorAll('[data-review-report]').forEach(b=>b.addEventListener('click',async ()=>{
+      if(!gmMode||view!=='mission-detail')return;
+      const [id,decision]=b.dataset.reviewReport.split(':');const r=currentMission(id);
+      if(!r||r.status!=='pending')return;
       if(live){try{await backend.reviewReport(r._dbId,decision==='approve');await reloadRemote();}catch(err){alert(err.message);}return;}
       r.status=decision==='approve'?'approved':'rejected';r.reviewed='Demo-Spielleitung · '+stamp();renderMissions();
     }));
-    document.querySelectorAll('[data-open-character]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.openCharacter;activeTab='missions';navigate('personnel');}));
+    root.querySelectorAll('[data-open-character]').forEach(b=>b.addEventListener('click',()=>{selectedId=b.dataset.openCharacter;activeTab='missions';navigate('personnel');}));
   }
   function reportDetail(r){
     const participants=r.participants.map(id=>characters.find(c=>c.uid===id)).filter(Boolean);
@@ -216,18 +226,25 @@
   }
   function navigate(to){
     view=to;
-    $('heroDirectory').hidden=to!=='directory';
-    $('personnelView').hidden=to!=='personnel';
-    $('missionsView').hidden=to!=='missions';
-    const directory=to==='directory', personnel=to==='personnel', mission=to==='missions';
-    $('introTitle').innerHTML=mission?'OPERATIONS <em>ARCHIVE<span class="title-period">.</span></em>':directory?'HERO <em>DIRECTORY<span class="title-period">.</span></em>':'PERSONNEL <em>ARCHIVE<span class="title-period">.</span></em>';
-    $('introCode').textContent=mission?'// 02. OPERATIONS':directory?'// 00. HERO DIRECTORY':'// 01. PERSONNEL FILE';
-    $('introSubtitle').textContent=mission?'Einsatzprotokolle · Fallstatus · Dokumentierte Einsätze':directory?'Heldenverzeichnis · Alle & meine Charaktere · SDN-Personalakten':'Vertrauliche Charakterakte · Registrierte SDN-Angehörige';
-    document.querySelectorAll('.rail-button').forEach(b=>b.classList.toggle('active',b.dataset.action===(mission?'missions':'roster')));
-    if(mission)renderMissions();else if(personnel)renderAll();else renderDirectory();
-    if(!mission)window.scrollTo({top:0,behavior:'instant'});
+    const directory=to==='directory', personnel=to==='personnel', mission=to==='missions', report=to==='mission-detail';
+    $('heroDirectory').hidden=!directory;
+    $('personnelView').hidden=!personnel;
+    $('missionsView').hidden=!(mission||report);
+    $('workspaceIntro').hidden=!(directory||mission);
+    if(directory){
+      $('introTitle').innerHTML='PERSONAL<em>DATENBANK</em>';
+      $('introCode').textContent='// 01. PERSONNEL';
+      $('introSubtitle').textContent='Übersicht aller Personalakten des SDN';
+    } else if(mission){
+      $('introTitle').innerHTML='EINSATZ<em>PROTOKOLLE</em>';
+      $('introCode').textContent='// 02. OPERATIONS';
+      $('introSubtitle').textContent='Übersicht aller dokumentierten Einsätze des SDN';
+    }
+    document.querySelectorAll('.rail-button').forEach(b=>b.classList.toggle('active',b.dataset.action===((mission||report)?'missions':'roster')));
+    if(mission||report)renderMissions();else if(personnel)renderAll();else renderDirectory();
+    window.scrollTo({top:0,behavior:'instant'});
   }
-  function renderAll(){renderRoster();renderRecord();renderDirectory();}
+  function renderAll(){renderRecord();}
   const formInput=(key,label,opts={})=>{const v=editNew?'':fieldValue(editTarget,key);const max=opts.max||255;return `<label class="${opts.wide?'span2':''}">${safe(label)}${opts.hint?`<span class="field-hint">${safe(opts.hint)}</span>`:''}${opts.area?`<textarea name="${key}" maxlength="${max}" rows="${opts.rows||3}">${safe(v)}</textarea>`:`<input name="${key}" maxlength="${max}" value="${safe(v)}" />`}</label>`;};
   const selectField=(key,label,values)=>`<label>${safe(label)}<select name="${key}">${values.map(([value,title])=>`<option value="${safe(value)}" ${String(fieldValue(editTarget,key))===String(value)?'selected':''}>${safe(title)}</option>`).join('')}</select></label>`;
   const section=(title,contents,open=false)=>`<details class="editor-group" ${open?'open':''}><summary>${safe(title)} <span>＋</span></summary><div class="form-grid">${contents}</div></details>`;
@@ -390,7 +407,7 @@
     const comment=$('proposalComment').value.trim();
     if(live){
       try{const result=await backend.submitTicket({characterId:editNew?null:editTarget.uid,candidate,operations,changes:differences,comment});
-        selectedId=result.character_id; activeTab='audit';$('editDialog').close();filter='all';$('searchInput').value='';await reloadRemote(); navigate('personnel');}
+        selectedId=result.character_id; activeTab='audit';$('editDialog').close();await reloadRemote(); navigate('personnel');}
       catch(error){$('formError').textContent='Antrag nicht gespeichert: '+error.message;}
       return;
     }
@@ -398,7 +415,7 @@
     if(editNew){
       const draft=clone(editTarget);draft.alias='ENTWURF '+nextChar;draft.name='Freigabe ausstehend';draft.status='draft';draft.proposals.unshift(p);logChange(draft,'NEUE AKTE ZUR FREIGABE EINGEREICHT',['Ticket '+p.id]);characters.push(draft);selectedId=draft.uid;nextChar++;
     }else{editTarget.proposals.unshift(p);logChange(editTarget,'ÄNDERUNGSTICKET EINGEREICHT',[p.id,...differences.map(d=>d.label)]);}
-    activeTab='audit';$('editDialog').close();filter='all';$('searchInput').value='';document.querySelectorAll('.filter-chip[data-filter]').forEach(b=>b.classList.toggle('selected',b.dataset.filter==='all'));navigate('personnel');
+    activeTab='audit';$('editDialog').close();navigate('personnel');
   }
 
     function openMissionDialog(){
@@ -415,26 +432,24 @@
     else if(data.outcome==='open'){ $('missionError').textContent='Abgeschlossene Fälle benötigen ein abschließendes Ergebnis.';return; }
     const participants=[...$('participantChecks').querySelectorAll('input:checked')].map(el=>el.value);
     if(!data.title||!data.date||!data.situation||!data.events||!participants.length){$('missionError').textContent='Bitte Einsatzname, Datum, Ausgangslage, Verlauf und mindestens einen Teilnehmer angeben.';return;}
-    if(live){backend.submitReport({...data,participants}).then(async id=>{reportFocus=id;missionFilter='all';$('missionDialog').close();await reloadRemote();navigate('missions');}).catch(e=>{$('missionError').textContent='Bericht nicht gespeichert: '+e.message;});return;}
+    if(live){backend.submitReport({...data,participants}).then(async id=>{reportFocus=id;missionFilter='all';$('missionDialog').close();await reloadRemote();navigate('mission-detail');}).catch(e=>{$('missionError').textContent='Bericht nicht gespeichert: '+e.message;});return;}
     const id='OPS-'+String(nextMission++).padStart(4,'0');
     reports.unshift({...data,id,participants,status:'pending',submitted:'Demo-Spieler · '+stamp(),reviewed:''});
-    reportFocus=id;missionFilter='all';$('missionDialog').close();navigate('missions');
+    reportFocus=id;missionFilter='all';$('missionDialog').close();navigate('mission-detail');
   }
   function reset(){if(live)return;if(!confirm('Alle Änderungen, Bilder, Protokolle und Freigaben der Demo-Sitzung zurücksetzen?'))return;
-    characters=[clone(BASE)];reports=clone(REPORTS);selectedId=BASE.uid;activeTab='identity';view='personnel';filter='all';gmMode=false;nextChar=1;nextMission=3;nextTicket=1;reportFocus=null;missionFilter='all';$('searchInput').value='';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('selected',b.dataset.filter==='all'));renderGM();navigate('personnel');}
+    characters=[clone(BASE)];reports=clone(REPORTS);selectedId=BASE.uid;activeTab='identity';view='directory';gmMode=false;nextChar=1;nextMission=3;nextTicket=1;reportFocus=null;missionFilter='all';directoryScroll=0;missionScroll=0;renderGM();navigate('directory');}
   function renderGM(){$('gmToggle').textContent=live?(gmMode?'SPIELLEITUNG · ABMELDEN':'MITGLIED · ABMELDEN'):(gmMode?'SPIELLEITUNG · DEMO':'SPIELERANSICHT');$('gmToggle').classList.toggle('is-gm',gmMode);}
 
-  $('directorySearch').addEventListener('input',renderDirectory);
-  $('directoryFilter').addEventListener('change',e=>{directoryFilter=e.target.value;renderDirectory();});
-  $('directorySort').addEventListener('change',e=>{directorySort=e.target.value;renderDirectory();});
+  $('directorySearch').addEventListener('input',()=>{directoryScroll=0;renderDirectory();});
+  $('directoryFilter').addEventListener('change',e=>{directoryFilter=e.target.value;directoryScroll=0;renderDirectory();});
+  $('directorySort').addEventListener('change',e=>{directorySort=e.target.value;directoryScroll=0;renderDirectory();});
   $('directoryAdd').addEventListener('click',()=>openEdit(true));
   $('backDirectory').addEventListener('click',()=>navigate('directory'));
-  $('searchInput').addEventListener('input',renderRoster);
-  document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('selected',x===b));renderRoster();}));
-  $('editButton').addEventListener('click',()=>openEdit());$('addNew').addEventListener('click',()=>openEdit(true));$('editForm').addEventListener('submit',saveEdit);
+  $('editButton').addEventListener('click',()=>openEdit());$('editForm').addEventListener('submit',saveEdit);
   $('closeDialog').addEventListener('click',()=>$('editDialog').close());$('cancelEdit').addEventListener('click',()=>$('editDialog').close());
   $('missionForm').addEventListener('submit',saveMission);$('closeMissionDialog').addEventListener('click',()=>$('missionDialog').close());$('cancelMission').addEventListener('click',()=>$('missionDialog').close());
-  $('gmToggle').addEventListener('click',()=>{if(live){backend.logout();return;}gmMode=!gmMode;renderGM();view==='personnel'?renderRecord():renderMissions();});
+  $('gmToggle').addEventListener('click',()=>{if(live){backend.logout();return;}gmMode=!gmMode;renderGM();view==='personnel'?renderRecord():(view==='missions'||view==='mission-detail'?renderMissions():renderDirectory());});
   $('approveButton').addEventListener('click',async ()=>{
     if(!gmMode)return;const c=picked();if(!c)return;
     if(live){try{await backend.setCharacterStatus(c.uid,c.status!=='approved');await reloadRemote();}catch(error){alert(error.message);}return;}
@@ -448,13 +463,16 @@
   });
   $('auditButton').addEventListener('click',()=>{activeTab='audit';renderRecord();});$('printButton').addEventListener('click',()=>window.print());$('resetDemo').addEventListener('click',reset);if(live)$('resetDemo').hidden=true;
   $('privacyInfo').addEventListener('click',()=>$('privacyDialog').showModal());$('closePrivacy').addEventListener('click',()=>$('privacyDialog').close());$('gotItPrivacy').addEventListener('click',()=>$('privacyDialog').close());
-  document.querySelectorAll('.rail-button').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.action==='roster'?'directory':'missions')));
-  document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();$('directorySearch').focus();navigate('directory');}});
+  document.querySelectorAll('.rail-button').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.action==='roster')navigate('directory');
+    else {reportFocus=null;navigate('missions');}
+  }));
+  document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();navigate('directory');$('directorySearch').focus();}});
   async function reloadRemote(){
     const data=await backend.loadAll();
     characters=data.characters;reports=data.reports;
     if(!characters.some(c=>c.uid===selectedId))selectedId=characters[0]?.uid||'';
-    if(view==='missions')renderMissions();else if(view==='directory')renderDirectory();else renderAll();
+    if(view==='missions'||view==='mission-detail')renderMissions();else if(view==='directory')renderDirectory();else renderAll();
   }
   function showGate(title,message,showLogin=false){
     document.body.classList.add('secure-locked');
