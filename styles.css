@@ -684,3 +684,21 @@ html,body{max-width:100%;overflow-x:clip}
  #missionsView .sdn-detail-topbar .record-top-actions>button{flex:1 1 155px}
 }
 @media print{#missionsView .sdn-detail-topbar{display:none!important}.sdn-report-edits .ticket-review{display:none!important}}
+
+
+/* SDN v0.17 – gleiche Position- und Aktivitätskennzeichnung in Karten und Akten */
+.sdn-position-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:2px;min-width:0}
+.sdn-position-row .sdn-position-tag{flex:0 1 auto}
+.sdn-position-row .sdn-activity-tag{margin:0;font-size:10px;letter-spacing:.06em;padding:4px 8px;line-height:1.2}
+.file-subtitle .sdn-record-position{color:var(--sdn-card-accent,#52665d);font-weight:850;letter-spacing:.055em;text-transform:uppercase}
+
+/* Einsatzlevel in Einsatzübersicht und verknüpften Einsatzkacheln */
+.sdn-case-card>.sdn-report-level{position:static;align-self:flex-start;margin:1px 0 5px}
+.sdn-report-level{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:5px 9px;border:1px solid currentColor;border-radius:2px;background:#263a3a;color:#d0d9cb;font:850 11px/1.1 monospace;letter-spacing:.12em}
+.sdn-report-level-e{color:#91c7ac}
+.sdn-report-level-d{color:#a4c8db}
+.sdn-report-level-c{color:#b0ade8}
+.sdn-report-level-b{color:#e6c46a}
+.sdn-report-level-a{color:#ed9c67}
+.sdn-report-level-s{color:#f28b86}
+@media(max-width:500px){.sdn-case-card>.sdn-report-level{padding:4px 6px;font-size:10px}.sdn-case-card>.sdn-case-stamp{font-size:12px;left:12px}}

@@ -1,45 +1,38 @@
-# SDN v0.16 – Einsatzprotokolle bearbeiten und löschen
+# SDN v0.17 – Einsatzlevel, Positionsfarben und bereinigte Akten
 
-Dieses Paket ist ein **Update für die bestehende v0.15**. Es löscht keine vorhandenen Charaktere oder Berichte. Die Datenbankänderung muss vor dem Upload der neuen Website-Dateien ausgeführt werden.
+Dieses Paket ist ein **Update für die bereits laufende SDN v0.16**. Es enthält die aktualisierten Dateien `index.html`, `app.js`, `styles.css` und die additive Datenbankmigration `supabase/migrations/202610280008_report_levels.sql`.
 
-## Vorbereitung
+## Was sich ändert
 
-1. Im Supabase-Dashboard nach Möglichkeit eine Sicherung/Export deiner vorhandenen Tabellen erstellen (insbesondere `sdn_reports`).
-2. Den aktuellen GitHub-Commit als Rücksprungpunkt notieren. **Keine** `.env`-Dateien, Discord-Bot-Tokens oder GitHub-Tokens zu GitHub hinzufügen.
-3. Vergewissern, dass die Datenbankmigrationen bis einschließlich `202610280006_dispatchers.sql` aus v0.14 installiert sind.
+- Einsatzberichte haben das neue Pflichtfeld **Einsatzlevel** mit Auswahl **E, D, C, B, A, S**. Das Level wird auf Einsatzkacheln und in der vollständigen Einsatzakte angezeigt, auch auf den Einsatzkacheln innerhalb einer Personalakte.
+- In bestehenden Einsätzen kann das Level über **DATEN BEARBEITEN** nachgetragen und als Änderungsticket zur Freigabe eingereicht werden. Die OPS-ID bleibt erhalten.
+- Bestehende Berichte ohne Level werden nicht gelöscht oder automatisch eingestuft. Bis zur nächsten Bearbeitung steht in der Detailakte **Nicht eingestuft**; die Kachel zeigt noch kein Level.
+- **Aktiv / Inaktiv** steht in den Heldenkacheln jetzt unmittelbar neben der **Position**.
+- In der geöffneten Personalakte erscheint die Position in der Akzentfarbe ihrer Rolle (Superheld rot, Dispatcher orange, Arzt indigo, Techniker blau, Manager grün, Teamleiter gelb, Standortleitung violett).
+- Einsatzkacheln zeigen **TEAM:** vor der Liste der beteiligten Helden.
+- Fünf rein erklärende Texte in Persönlichkeit, Krankenakte, Beziehungen, Einsätzen und am Ende von Einsatzberichten wurden entfernt. Gespeicherte Inhalte bleiben unverändert.
 
-## Installation
+## Installation – bitte in dieser Reihenfolge
 
-1. **Supabase → SQL Editor** öffnen. Die Datei `supabase/migrations/202610280007_report_edits.sql` im Texteditor öffnen, **ihren gesamten Inhalt** in den SQL Editor kopieren und einmal ausführen. Nicht den bloßen Dateipfad eingeben. Erwartet: `Success. No rows returned`.
-2. Im Repository `timan52/SDN` im Stammverzeichnis diese **vier Dateien zusammen** ersetzen: `index.html`, `app.js`, `backend.js`, `styles.css`.
-3. Auf `main` committen/pushen. Bei **GitHub → Actions** bzw. **Settings → Pages** prüfen, dass die Veröffentlichung erfolgreich war.
-4. Die Seite `https://timan52.github.io/SDN/` mit **Strg+Umschalt+R** neu laden. Die bestehende `config.js`, Discord-Edge-Functions, Portrait-Dateien und übrigen Dateien bleiben unverändert.
+1. **Sicherung anfertigen:** Exportiere insbesondere `sdn_reports` (Datenbank / Table Editor) und notiere den letzten funktionierenden GitHub-Commit. An den bisherigen Datensätzen wird mit dem Update nichts gelöscht.
+2. **SQL ausführen:** Supabase Dashboard → **SQL Editor** → neues Query öffnen. Öffne die Datei `supabase/migrations/202610280008_report_levels.sql` lokal mit einem Texteditor. **Kopiere ihren gesamten Inhalt** in den SQL Editor und klicke auf **Run**. **Nicht nur den Dateipfad einfügen.** Voraussetzung ist, dass die Migration aus v0.16 (`202610280007_report_edits.sql`) bereits ausgeführt wurde.
+3. **Website-Dateien ersetzen:** Im GitHub-Repository `timan52/SDN` im Stammverzeichnis die bisherigen Dateien `index.html`, `app.js` und `styles.css` durch die neuen aus diesem Paket ersetzen. Alle drei gehören zusammen.
+4. Änderungen auf `main` committen/pushen. Anschließend unter **GitHub → Actions** die erfolgreiche GitHub-Pages-Veröffentlichung prüfen.
+5. `https://timan52.github.io/SDN/` mit **Strg + Umschalt + R** neu laden.
 
-## Neuer Ablauf
+**Nicht ersetzen:** `config.js`, `backend.js`, `portrait-editor.js`, Discord-Edge-Functions, persönliche Secrets oder vorhandene Bilder. Das Update erfordert keine neuen geheimen Zugangsdaten.
 
-- Beim Öffnen eines Einsatzprotokolls stehen **DATEN BEARBEITEN** und (nur für SL) **EINSATZPROTOKOLL LÖSCHEN** in derselben Aktionsleiste **oberhalb des Dokuments** wie bei der Personalakte.
-- Der Ersteller des Einsatzprotokolls oder ein SL-Mitglied kann das vorhandene Protokoll in der bekannten Formularmaske bearbeiten. Die bestehenden Felder werden vorausgefüllt, auch der Abschlussstatus und eine mögliche Kundenbewertung.
-- Mit **ABSENDEN** wird ein **Änderungsantrag** erzeugt; der bisher freigegebene Bericht bleibt unverändert. Die optionalen „ANMERKUNG ZUM ANTRAG“-Texte werden mitgespeichert.
-- In der Detailansicht unter **ÄNDERUNGSANTRÄGE** sieht der Einreicher seine Anträge; die Spielleitung sieht alle und kann sie genehmigen oder ablehnen. Die Entscheidung ist im Unterschied zum gewöhnlichen Fall-Abschluss ausschließlich SL-berechtigt.
-- Auch mehrere parallele Änderungen werden unterstützt. Werden dieselben Felder nach Antragstellung geändert, blockiert die Datenbank eine überholte Freigabe mit einer **Konfliktmeldung**. Nicht überlappende Feldänderungen können unabhängig genehmigt werden.
-- Ein genehmigter Änderungsantrag aktualisiert **denselben Einsatzbericht**, ohne eine neue OPS-ID zu vergeben. Änderungen an Beteiligten oder Dispatcher passen dadurch auch die Verknüpfungen in den Charakterakten automatisch an.
-- **Löschen** bleibt eine SL-exklusive, serverseitig geschützte Funktion mit Sicherheitsabfrage. Beim Löschen verschwinden die Verknüpfungen zu den Charakterakten; offene Änderungsanträge für diesen Bericht werden über `ON DELETE CASCADE` ebenfalls entfernt.
-- Neue Einsatzberichte können unverändert erstellt und durch die SL genehmigt werden. Bei zunächst noch nicht freigegebenen Berichten muss die ursprüngliche Freigabe erfolgen, bevor ein separater Änderungsantrag genehmigt werden kann.
+## Prüfung mit Testeinträgen
 
-## Prüfen – am besten mit Testdaten
+1. Personalübersicht öffnen: Bei einer aktiven/inaktiven Person muss der Status direkt **neben der Positionskennzeichnung** stehen.
+2. Personalakte öffnen: Die Position oberhalb des Portraits erscheint in ihrer Rollenfarbe. In Persönlichkeit, Historie, Beziehungen und Einsätzen sind die genannten Erklärungssätze verschwunden.
+3. Einsatzübersicht öffnen: Auf jeder neu eingestuften Kachel steht z. B. **LEVEL B** und davor, wo die Teilnehmer angezeigt werden, **TEAM:**.
+4. **Einsatzprotokoll erstellen:** Das Leveldropdown bietet ausschließlich E–S. Ohne Level darf die Eingabe nicht abgesendet werden. Mit Level sollte ein neues Protokoll als Antrag eingereicht werden.
+5. **Bestehenden Einsatz bearbeiten:** Einen alten Bericht öffnen → **DATEN BEARBEITEN** → Level auswählen → **ABSENDEN** → mit SL-Account den Änderungsantrag genehmigen. Danach muss das Level auf der Fallkachel und in der Detailakte zu sehen sein.
+6. Einen alten Einsatz ohne Level prüfen: Er muss weiter lesbar sein und darf nicht verschwinden.
 
-1. Bereits genehmigten Testeinsatz öffnen: beide Aktionen oben sehen (Spieler sieht nur „DATEN BEARBEITEN“, wenn er der Einreicher ist; SL sieht auch Löschen).
-2. Einsatz durch Spieler bearbeiten, beispielsweise Kundensterne oder Abschluss ändern, und **ABSENDEN** klicken. Die ursprünglichen Werte dürfen noch nicht verändert sein.
-3. Mit SL-Account den Änderungsantrag unter dem Einsatz ansehen, Vorher-nachher vergleichen und genehmigen. Die neuen Werte müssen anschließend in der Akte und auf der Kachel erscheinen.
-4. Zwei Tickets mit Änderungen an demselben Feld einreichen. Eines genehmigen. Beim zweiten muss die Konfliktprüfung die Freigabe verhindern.
-5. Ein Ticket ablehnen und prüfen, dass die Akte unverändert bleibt.
-6. SL-Löschbutton nur mit **Testeinsatz** überprüfen. Die Referenz muss in der Charakterakte verschwinden.
-7. Das Neuanlegen eines Einsatzes weiterhin testen (die beiden Dialogwege verwenden dasselbe Formular).
+## Datenbank- und Sicherheitsverhalten
 
-## Sicherheit
+Die SQL-Migration ergänzt eine Einschränkung auf die zulässigen Level E–S, verpflichtet Neuanlagen zu einem Level und erlaubt das Feld in den bereits vorhandenen Bericht-Änderungstickets. Sie verändert keine bestehenden Berichte und keine Zugriffsrollen. Der bestehende serverseitige Freigabeablauf bleibt erhalten.
 
-Die Migration ergänzt `sdn_report_edits` mit Row Level Security. Es gibt **keine** direkten INSERT-, UPDATE- oder DELETE-Rechte für den Browser. `sdn_submit_report_edit` prüft Discord-Mitgliedschaft, Berichtseigentümer/SL, erlaubte Felder, Referenzen und Berichtsregeln. `sdn_review_report_edit` prüft SL-Berechtigung und mögliche Versionskonflikte serverseitig. Bereits vorhandene Löschregeln bleiben bestehen.
-
-## Was nicht automatisch getestet wurde
-
-Ein vollständiger Test gegen deine **live laufende** Supabase-Datenbank und deinen echten Discord-Account ist hier nicht möglich. Die JS-Syntax wurde geprüft, die Servermigration nicht in deinem Projekt ausgeführt. Die Browser-Testumgebung hat lokale Seitenaufrufe gesperrt. Deshalb bitte zunächst einen Testbericht und ein Testticket verwenden.
+Die JavaScript-Syntax wurde geprüft und die UI-Funktionen wurden mit simulierten Supabase-Daten in Chromium getestet. Die Migration konnte nicht gegen dein live laufendes Supabase-Projekt ausgeführt werden. Deshalb bitte zuerst mit einem Testeinsatz prüfen.

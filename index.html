@@ -36,7 +36,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg>
         </button>
       </div>
-      <div class="rail-bottom" title="Mitgliederportal">v0.16<span>●</span></div>
+      <div class="rail-bottom" title="Mitgliederportal">v0.17<span>●</span></div>
     </aside>
 
     <div class="main-column">
@@ -114,6 +114,7 @@
         <p class="dialog-description" id="missionDialogDescription">Standardisiertes Einsatzprotokoll. Neue Berichte sind zuerst <strong>zur Freigabe eingereicht</strong>. Erst nach Genehmigung erscheinen sie in den verknüpften Personalakten.</p>
         <div class="form-grid">
           <label class="span2">EINSATZBEZEICHNUNG *<input name="title" maxlength="100" required placeholder="z. B. Zwischenfall am Hafen" /></label>
+          <label>EINSATZLEVEL *<select name="level" required><option value="">Level auswählen</option><option value="E">E</option><option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option><option value="S">S</option></select></label>
           <label class="span2">KUNDE<input name="customer" maxlength="130" placeholder="Auftraggeber / Kunde" /></label>
           <label class="span2">ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="open">Noch offen</option><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option></select></label>
           <div class="sdn-customer-review span2" id="missionCustomerReview"><div class="sdn-review-heading"><strong>KUNDENBEWERTUNG</strong><span id="customerReviewHint">ERST BEI ABGESCHLOSSENEM FALL VERFÜGBAR</span></div>
