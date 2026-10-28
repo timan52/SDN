@@ -90,7 +90,7 @@
   }
   async function loadAll() {
     if (!memberInfo?.member) throw new Error('Mitgliedschaft erforderlich');
-    const [c, s, t, r, a, profiles, notes] = await Promise.all([
+    const [c, s, t, r, a, profiles, notes, reportEdits] = await Promise.all([
       client.from('sdn_characters').select('id,owner_id,status,data,version,created_at').order('created_at'),
       client.from('sdn_character_secrets').select('character_id,data'),
       client.from('sdn_tickets').select('id,ticket_no,character_id,requested_by,comment,operations,changes,priority,is_new,status,created_at,reviewed_at').order('created_at', { ascending: false }),
@@ -98,8 +98,9 @@
       client.from('sdn_audit').select('character_id,actor_id,action,ref,occurred_at').order('occurred_at', { ascending: false }),
       client.from('sdn_discord_profiles').select('user_id,discord_name,discord_username'),
       client.from('sdn_file_notes').select('id,character_id,author_character_id,author_alias,body,created_at').order('created_at',{ascending:false}),
+      client.from('sdn_report_edits').select('id,report_id,requested_by,base_report,patch,comment,status,created_at,reviewed_at').order('created_at',{ascending:false}),
     ]);
-    [c, s, t, r, a, profiles, notes].forEach(handle);
+    [c, s, t, r, a, profiles, notes, reportEdits].forEach(handle);
     const names = new Map(profiles.data.map(row => [row.user_id, row]));
     // Guild nickname is verified and stored server-side after Discord membership check.
     // Fall back to OAuth metadata only if there is no verified profile yet.
@@ -146,9 +147,16 @@
       proposals: proposals.get(row.id) || [], changeLog: audits.get(row.id) || [],
     }));
 
+    const editsByReport=new Map();
+    for(const e of reportEdits.data){
+      const list=editsByReport.get(e.report_id)||[];
+      list.push({id:e.id,requestedBy:displayOwner(e.requested_by),baseReport:e.base_report,patch:e.patch,comment:e.comment,status:e.status,time:new Date(e.created_at).toLocaleString('de-DE')});
+      editsByReport.set(e.report_id,list);
+    }
     const reports = r.data.map(row => ({
       ...row.report, _dbId: row.id, id: asCode('OPS', row.report_no),
       status: row.status, submittedByMe: row.submitted_by === user.id, submitted: displayOwner(row.submitted_by), createdAt: row.created_at,
+      edits:editsByReport.get(row.id)||[],
       reviewed: row.reviewed_at ? new Date(row.reviewed_at).toLocaleString('de-DE') : '',
     }));
     return { characters: chars, reports, fileNotes: notes.data.map(n=>({ id:n.id, characterId:n.character_id, authorId:n.author_character_id, authorAlias:n.author_alias, body:n.body, createdAt:n.created_at })) };
@@ -211,10 +219,18 @@
   async function reviewReport(dbId, approve) {
     handle(await client.rpc('sdn_review_report', { p_report_id: dbId, p_approve: approve }));
   }
+  async function submitReportEdit(dbId,candidate,comment=''){
+    await session();
+    return handle(await client.rpc('sdn_submit_report_edit', {p_report_id:dbId,p_candidate:candidate,p_comment:comment}));
+  }
+  async function reviewReportEdit(editId,approve){
+    await session();
+    return handle(await client.rpc('sdn_review_report_edit',{p_edit_id:editId,p_approve:approve}));
+  }
 
   window.SDNBackend = {
     enabled: configured, prepare, session, login, logout, verify, loadAll,
-    submitTicket, reviewTicket, setCharacterStatus, submitReport, reviewReport, addFileNote,
+    submitTicket, reviewTicket, setCharacterStatus, submitReport, reviewReport, submitReportEdit, reviewReportEdit, addFileNote,
     deleteCharacter, deleteReport, setCharacterActivity,
     uploadPortraitBlob, originalBlob, publishPortrait,
     proposalImageUrl: path => previewUrls.get(path) || '',

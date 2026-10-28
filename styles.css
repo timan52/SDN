@@ -669,3 +669,18 @@ html,body{max-width:100%;overflow-x:clip}
 @media(max-width:600px){
   .mission-cards.embedded { grid-template-columns: 1fr; }
 }
+
+/* v0.16 – Aktionen über dem Einsatzdokument wie bei der Personalakte */
+#missionsView .sdn-detail-topbar{max-width:1100px;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:17px}
+#missionsView .sdn-detail-topbar .record-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#missionsView .sdn-detail-topbar .outline-button{white-space:normal;text-align:center}
+.sdn-report-edits{border-top:2px dashed #aab3a2;margin-top:28px;padding-top:23px;scroll-margin-top:90px}
+.sdn-report-edits .ticket-card{margin:13px 0}
+.sdn-report-edits .ticket-beforeafter pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:700px){
+ #missionsView .sdn-detail-topbar{align-items:stretch}
+ #missionsView .sdn-detail-topbar .sdn-return-button{width:100%}
+ #missionsView .sdn-detail-topbar .record-top-actions{width:100%;justify-content:flex-start}
+ #missionsView .sdn-detail-topbar .record-top-actions>button{flex:1 1 155px}
+}
+@media print{#missionsView .sdn-detail-topbar{display:none!important}.sdn-report-edits .ticket-review{display:none!important}}
