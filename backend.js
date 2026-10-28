@@ -90,15 +90,16 @@
   }
   async function loadAll() {
     if (!memberInfo?.member) throw new Error('Mitgliedschaft erforderlich');
-    const [c, s, t, r, a, profiles] = await Promise.all([
+    const [c, s, t, r, a, profiles, notes] = await Promise.all([
       client.from('sdn_characters').select('id,owner_id,status,data,version,created_at').order('created_at'),
       client.from('sdn_character_secrets').select('character_id,data'),
       client.from('sdn_tickets').select('id,ticket_no,character_id,requested_by,comment,operations,changes,priority,is_new,status,created_at,reviewed_at').order('created_at', { ascending: false }),
       client.from('sdn_reports').select('id,report_no,submitted_by,report,status,created_at,reviewed_at').order('created_at', { ascending: false }),
       client.from('sdn_audit').select('character_id,actor_id,action,ref,occurred_at').order('occurred_at', { ascending: false }),
       client.from('sdn_discord_profiles').select('user_id,discord_name,discord_username'),
+      client.from('sdn_file_notes').select('id,character_id,author_character_id,author_alias,body,created_at').order('created_at',{ascending:false}),
     ]);
-    [c, s, t, r, a, profiles].forEach(handle);
+    [c, s, t, r, a, profiles, notes].forEach(handle);
     const names = new Map(profiles.data.map(row => [row.user_id, row]));
     const displayOwner = id => names.get(id)?.discord_name || (id === user.id ? 'Du' : 'Discord-Spieler');
     const userSearchName = id => names.get(id)?.discord_username || '';
@@ -147,7 +148,7 @@
       status: row.status, submittedByMe: row.submitted_by === user.id, submitted: displayOwner(row.submitted_by), createdAt: row.created_at,
       reviewed: row.reviewed_at ? new Date(row.reviewed_at).toLocaleString('de-DE') : '',
     }));
-    return { characters: chars, reports };
+    return { characters: chars, reports, fileNotes: notes.data.map(n=>({ id:n.id, characterId:n.character_id, authorId:n.author_character_id, authorAlias:n.author_alias, body:n.body, createdAt:n.created_at })) };
   }
 
   function normalizeOperations(operations) {
@@ -184,6 +185,10 @@
   async function setCharacterStatus(dbId, approved) {
     handle(await client.rpc('sdn_set_character_status', { p_character_id: dbId, p_approved: approved }));
   }
+  async function addFileNote(characterId, authorCharacterId, body) {
+    const result=await client.rpc('sdn_add_file_note', {p_character_id:characterId,p_author_character_id:authorCharacterId,p_body:body});
+    return handle(result);
+  }
   async function submitReport(report) {
     return handle(await client.rpc('sdn_submit_report', { p_report: report }));
   }
@@ -193,11 +198,12 @@
 
   window.SDNBackend = {
     enabled: configured, prepare, session, login, logout, verify, loadAll,
-    submitTicket, reviewTicket, setCharacterStatus, submitReport, reviewReport,
+    submitTicket, reviewTicket, setCharacterStatus, submitReport, reviewReport, addFileNote,
     uploadPortraitBlob, originalBlob, publishPortrait,
     proposalImageUrl: path => previewUrls.get(path) || '',
     imageUrl: path => (typeof path === 'string' && /^https:\/\/[a-z0-9-]+\.github\.io\//i.test(path) ? path : ''),
     get userId() { return user?.id || null; },
     get isAdmin() { return Boolean(memberInfo?.admin); },
+    get isHR() { return Boolean(memberInfo?.hr); },
   };
 })();

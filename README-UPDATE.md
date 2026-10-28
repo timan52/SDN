@@ -1,40 +1,74 @@
-# SDN v0.9 – Getrennte Übersichten und Detailansichten
+# SDN v0.10 – Einheitliche Kacheln & Aktennotizen
 
-Dieses Paket ist ein **Frontend-Update für die bestehende SDN v0.8** unter `https://github.com/timan52/SDN`.
+Update **für die bestehende online laufende Version v0.9** unter `https://timan52.github.io/SDN/`. Keine Neuinstallation, keine vorhandenen Akten oder Tickets löschen.
 
-## Enthaltene Dateien
+## Änderungen
 
-- `index.html` – entfernt die alte Personalliste neben der Akte; zeigt keine doppelten Übersichtstitel; korrigiert das linke SDN-Logo
-- `app.js` – eigene Ansichten für Heldenverzeichnis, Personalakte, Einsatzübersicht und Einsatzakte; Zurück-Navigation, Freigabe nur im Bericht
-- `styles.css` – einzeln scrollbare Kachelbereiche, vollbreite Akten, unveränderte 4:5-Portraits, Desktop- und Mobile-Layout
+- Einsatzkacheln sind vollständig anklickbar, wie Charakterkacheln. Der separate Button „Einsatzakte öffnen“ entfällt. Auch die verlinkten Einsatzkacheln innerhalb eines Charakters bleiben anklickbar.
+- Einheitliche **Freigabe**-Badges unten in beiden Kacheltypen: Die SL sieht `FREIGEGEBEN`, `OFFEN` (oder `ABGELEHNT` bei abgelehnten Berichten). Spieler sehen **nur `OFFEN`** für eigene noch ausstehende Charakteranträge, Änderungen oder Einsatzberichte. Bei genehmigten Einträgen erscheint für Spieler kein Badge. Der große Fallstempel `FALL OFFEN` / `ABGESCHLOSSEN` ist eine *andere Information* und bleibt bei allen sichtbar.
+- Auch in der Einsatzdetailansicht wird nun ein Freigabestempel wie bei Charakterakten dargestellt.
+- Neuer Reiter **09 AKTENNOTIZ** neben dem vorhandenen Reiter „Personalnotizen“. Von SL und HR können dort Notizen angeheftet werden. Ein Eintrag besteht aus Text und am Ende aus **Verfassercharakter + serverseitigem Zeitstempel**. Der Verfasser muss ein **eigener, bereits freigegebener Charakter** sein. Einträge sind append-only: kein nachträgliches Bearbeiten oder Löschen in der Oberfläche.
+- HR darf Aktennotizen erstellen, aber nicht allein deshalb Tickets oder Einsatzberichte freigeben. SL kann beides.
 
-Die Konfigurationsdatei `config.js`, die Authentifizierung in `backend.js`, `portrait-editor.js`, deine Supabase-Funktionen, Datenbank und bereits genehmigten Akten bleiben unverändert.
+## Installation – Reihenfolge wichtig
 
-## Installation in dein bereits funktionierendes Projekt
+### 1. Datenbankmigration in Supabase ausführen
 
-1. Mache eine Sicherung deiner bisherigen `index.html`, `app.js` und `styles.css` (z. B. als Git-Commit oder Kopien auf dem PC).
-2. Entpacke das ZIP. Kopiere die drei genannten Dateien in den **Stammordner** deines bestehenden Repositories, also dorthin, wo deine aktuelle `config.js` liegt. Ersetze die gleichnamigen Dateien.
-3. **Nicht** `config.js`, `.env`, `backend.js` oder Dateien in `supabase/` durch etwas aus einem alten Paket ersetzen.
-4. Committe und pushe die drei geänderten Dateien auf den Branch `main` (z. B. über GitHub Desktop).
-5. Prüfe unter GitHub → Actions/Settings → Pages die erfolgreiche Bereitstellung.
-6. Öffne `https://timan52.github.io/SDN/` und lade mit `Strg + Umschalt + R` neu.
+1. Supabase Dashboard → dein Projekt → **SQL Editor → New query**.
+2. Datei `supabase/migrations/202610280002_file_notes.sql` mit einem Texteditor öffnen und **ihren vollständigen SQL-INHALT** hineinkopieren. Nicht den Dateipfad einfügen.
+3. **Run** anklicken. Erwartet: `Success. No rows returned`.
+4. Unter **Table Editor** sollte `sdn_file_notes` neu vorhanden sein. In `sdn_access` kommt die Spalte `is_hr` hinzu.
 
-**Kein neues SQL-Skript, kein Supabase-CLI-Befehl und kein erneutes Deployen von Edge Functions erforderlich.** Das Datenbankschema aus v0.8 bleibt bestehen.
+Die Migration legt nur neue Funktionen und die Notiztabelle an und erweitert die bestehende Zugriffstabelle. Bestehende Akten, Tickets und Einsatzberichte bleiben erhalten.
 
-## So soll die Navigation funktionieren
+### 2. HR-Rolle in Discord anlegen/auswählen (optional, wenn vorerst nur SL schreibt)
 
-- Nach Anmeldung → **Personaldatenbank** mit der Unterzeile „Übersicht aller Personalakten des SDN“.
-- Ein Heldenportrait anklicken → nur die **Personalakte**, ohne Kacheln, Seitenauswahl und große Übersichtsüberschrift. „← ALLE HELDEN“ öffnet wieder die Übersicht.
-- Linke Navigation, erstes Symbol → Personaldatenbank. Zweites Symbol → **Einsatzprotokolle** mit „Übersicht aller dokumentierten Einsätze des SDN“.
-- Einen Einsatz öffnen → nur die **Einsatzakte** mit „← ZUR EINSATZÜBERSICHT“. Die SL genehmigt oder lehnt den Bericht ausschließlich hier ab.
-- Beim Öffnen eines verlinkten Einsatzes aus einer Personalakte wird ebenfalls direkt dessen Detailansicht angezeigt. Ein verlinkter Held im Einsatzbericht führt direkt zur Personalakte.
-- Beide Kachelbereiche besitzen eine eigene Scrollfläche, während Suche, Filter und Erstellen-Button erreichbar bleiben.
-- Das Logo oben links lautet **SDN**, nicht `S◆N`.
+1. In deinem Discord-RP-Server **Servereinstellungen → Rollen** die Rolle `HR` auswählen oder erstellen.
+2. In Discord **Benutzereinstellungen → Erweitert → Entwicklermodus** aktivieren (falls noch nicht aktiv).
+3. Über das Rollen-Kontextmenü **Rollen-ID kopieren**.
+4. Unter Supabase → **Edge Functions → Secrets** einen neuen Secret-Eintrag anlegen:
+   - Name: `DISCORD_HR_ROLE_ID`
+   - Value: **die kopierte numerische Discord-Rollen-ID**, nicht der Rollenname.
+5. **Save**.
 
-## Testhinweise
+Wenn es noch keine HR-Rolle gibt, kannst du dieses Secret vorerst weglassen; SL darf weiterhin Notizen schreiben. **Keine** Bot-Tokens oder Secret-Keys in GitHub-Dateien oder `config.js` eintragen.
 
-Die Frontend-Funktionen wurden mit einer simulierten Discord-/Supabase-Sitzung in Chromium auf Desktop und Mobilgerät geprüft. In einem zusätzlichen UI-Stresstest wurden 204 Heldendatensätze und 302 Einsätze gerendert und durchsucht. Die Berechtigungslogik und Datenbanktabellen wurden **nicht** geändert. Die tatsächliche Verbindung zu deinem laufenden Supabase-Projekt kann nur nach dem Deployment überprüft werden.
+### 3. Discord-Prüffunktion aktualisieren
 
-### Skalierung später
+1. Ersetze in deinem lokalen bestehenden Repository **nur** `supabase/functions/verify-discord/index.ts` durch die Datei aus dem ZIP (Pfad identisch).
+2. Öffne PowerShell im Stammordner deines lokalen GitHub-Repositories (dort, wo `supabase` liegt).
+3. Ausführen:
 
-Bei weit über 1.000 Datensätzen **pro Supabase-Tabelle** sollte das derzeitige `backend.js` auf serverseitige Seitennavigation/Batch-Abfragen umgestellt werden, da Supabase-Abfragen standardmäßig eine Zeilenobergrenze haben können. Die neue scrollbare Oberfläche löst die Darstellung vieler Kacheln, nicht diese mögliche Backend-Grenze.
+```powershell
+npx.cmd supabase functions deploy verify-discord
+```
+
+**Keine** weiteren Secrets offenlegen oder `publish-portrait` neu deployen. Die verifizierte Rolle wird beim nächsten Login/Neuladen im `sdn_access.is_hr` gespeichert.
+
+### 4. Website aktualisieren
+
+Im **Stammverzeichnis** des bestehenden GitHub-Repositories die vier Dateien aus dem ZIP ersetzen:
+
+- `index.html`
+- `app.js`
+- `backend.js`
+- `styles.css`
+
+**Nicht ersetzen:** `config.js`, `portrait-editor.js`, `assets`, `portraits`, `.env` oder andere Supabase-Funktionen.
+
+Commit und Push auf Branch `main`, anschließend GitHub Pages unter `https://timan52.github.io/SDN/` mit **Strg+Umschalt+R** neu laden.
+
+### 5. Funktionstests
+
+1. **SL-Account:** In der Heldenübersicht stehen Freigabebadges unten an den Kacheln. Im Einsatzarchiv ebenfalls. Klicke auf eine beliebige Stelle innerhalb einer Einsatzkachel: Es öffnet sich nur die Detailakte.
+2. **SL-Account:** Eine Personalakte öffnen → `09 AKTENNOTIZ` → einen **eigenen freigegebenen Charakter** wählen, Text eingeben, `AKTENNOTIZ ANHÄNGEN` klicken. Nach Neuladen muss der Eintrag mit Text, Charakternamen und Datum erhalten bleiben.
+3. **HR-Account (ohne SL-Rolle):** nach erneuter Discord-Prüfung ebenfalls Aktennotizen hinzufügen, aber keine Freigaben durchführen.
+4. **Normaler Spieleraccount:** vorhandene Aktennotizen lesen, aber **keinen Editor** sehen. Bei genehmigten Kacheln erscheint kein `FREIGEGEBEN`-Badge. Eigene ausstehende Anträge zeigen `OFFEN`. Beim Einsatzfall bleibt der Fallstempel für alle sichtbar.
+5. **Ohne Servermitgliedschaft:** darf weiterhin keine Akten sehen.
+
+## Sicherheit und Einschränkungen
+
+- Der Notiztext und sein Verfasser werden durch eine *serverseitige* PostgreSQL-Funktion eingetragen. Es reicht nicht, im Browser eine SL-/HR-Schaltfläche einzublenden.
+- Diese Notizen sind innerhalb des Discord-RPs für berechtigte Leser einer Personalakte sichtbar. Der Reiter ist **kein** geheimer SL-Chat.
+- Die bestehende frei bearbeitbare Rubrik `Personalnotizen` bleibt getrennt und unterliegt weiter dem normalen Ticketsystem.
+- Das UI wurde lokal mit simulierten SL-, HR- und Spieler-Sitzungen getestet. SQL-Migration und Discord-Secret können erst nach Installation in deinem eigenen Projekt live getestet werden.

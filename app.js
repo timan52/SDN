@@ -7,7 +7,7 @@
   const show = value => String(value ?? '').trim() ? safe(value) : '<span class="missing-inline">NICHT HINTERLEGT</span>';
   const paragraph = value => `<p class="dossier-paragraph">${show(value)}</p>`;
   const STAT_KEYS = [['combat','COMBAT'],['vigor','VIGOR'],['mobility','MOBILITY'],['charisma','CHARISMA'],['intellect','INTELLECT']];
-  const TABS = [['identity','01 IDENTITÄT'],['attributes','02 ATTRIBUTE'],['abilities','03 FÄHIGKEITEN'],['personality','04 PERSÖNLICHKEIT'],['history','05 HISTORIE'],['relationships','06 BEZIEHUNGEN'],['missions','07 EINSÄTZE'],['notes','08 PERSONALNOTIZEN'],['secret','09 TOP SECRET']];
+  const TABS = [['identity','01 IDENTITÄT'],['attributes','02 ATTRIBUTE'],['abilities','03 FÄHIGKEITEN'],['personality','04 PERSÖNLICHKEIT'],['history','05 HISTORIE'],['relationships','06 BEZIEHUNGEN'],['missions','07 EINSÄTZE'],['notes','08 PERSONALNOTIZEN'],['file-notes','09 AKTENNOTIZ'],['secret','10 TOP SECRET']];
   const OUTCOMES = {success:'ERFOLGREICH ABGESCHLOSSEN', partial:'TEILWEISE ERFOLGREICH',failure:'NICHT ERFOLGREICH',open:'NOCH OFFEN'};
   const DAMAGE = {no:'Keine bekannten Schäden',yes:'Schäden dokumentiert',unknown:'Noch ungeklärt'};
   // Blank form template ONLY. The online site must NEVER ship character records.
@@ -24,7 +24,7 @@
     warning:'',changeLog:[],proposals:[]
   };
   const REPORTS = [];
-  let characters=[],reports=[],selectedId='',activeTab='identity',view='directory',gmMode=false;
+  let characters=[],reports=[],fileNotes=[],selectedId='',activeTab='identity',view='directory',gmMode=false,hrMode=false;
   let directoryFilter='all', directorySort='new', missionOwnership='all', missionCase='all', missionSort='new', missionSearch='';
   let directoryScroll=0, missionScroll=0;
   let editTarget=null,editNew=false,nextChar=1,nextMission=1,nextTicket=1,reportFocus=null,missionFilter='all';
@@ -48,6 +48,12 @@
   const currentMission = id => reports.find(r=>r.id===id);
   const approvedFor = uid => reports.filter(r=>r.status==='approved' && r.participants.includes(uid));
   const statusText = s => s==='approved'?'APPROVED':s==='draft'?'DRAFT':'PENDING';
+  const isStaff = () => gmMode || hrMode;
+  const cardApproval = (pending, approved, isOwn, rejected=false) => {
+    if (gmMode) return `<span class="sdn-approval-badge ${rejected?'is-rejected':pending?'is-pending':'is-approved'}">${rejected?'ABGELEHNT':pending?'OFFEN':'FREIGEGEBEN'}</span>`;
+    return pending && isOwn ? '<span class="sdn-approval-badge is-pending">OFFEN</span>' : '';
+  };
+  const ownCharacters = () => characters.filter(c=>c.ownerId===backend?.userId && c.status==='approved');
   const statusDescription = s => s==='approved'?'FREIGEGEBEN':s==='draft'?'ENTWURF · NICHT FREIGEGEBEN':'FREIGABE AUSSTEHEND';
 
   const ownerName = c => c.ownerDiscord || c.player || (c.ownerId === backend?.userId ? 'Du' : 'Discord-Spieler');
@@ -82,7 +88,7 @@
     $('directoryCards').innerHTML=filtered.length?filtered.map(c=>{
       const src=c.photo?(live?backend.imageUrl(c.photo):c.photo):'';
       const applications=hasNewRequest(c), changes=hasChangeRequest(c);
-      return `<button type="button" class="sdn-directory-card" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><span class="sdn-dir-id">SDN / ${safe(c.sdnId)}</span><strong>${safe(c.alias||'UNBENANNT')}</strong><small>${safe(ownerName(c))}</small><div class="sdn-dir-stamps"><span class="sdn-dir-state ${safe(c.status)}">${statusText(c.status)}</span>${gmMode&&applications?'<span class="sdn-dir-warning">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-dir-warning">ÄNDERUNGEN OFFEN</span>':''}</div></div><span class="sdn-dir-arrow">↗</span></button>`;
+      return `<button type="button" class="sdn-directory-card" data-directory-open="${safe(c.uid)}"><div class="sdn-dir-photo ${src?'':'no-photo'}">${src?`<img src="${safe(src)}" alt="Portrait von ${safe(c.alias)}" loading="lazy">`:`<span>${safe((c.alias||'?')[0])}</span>`}</div><div class="sdn-dir-details"><span class="sdn-dir-id">SDN / ${safe(c.sdnId)}</span><strong>${safe(c.alias||'UNBENANNT')}</strong><small>${safe(ownerName(c))}</small><div class="sdn-card-approval">${cardApproval(c.status!=='approved'||applications||changes,c.status==='approved',c.ownerId===backend?.userId)}${gmMode&&applications?'<span class="sdn-card-reason">NEUER ANTRAG</span>':''}${gmMode&&changes?'<span class="sdn-card-reason">ÄNDERUNG</span>':''}</div></div><span class="sdn-dir-arrow">↗</span></button>`;
     }).join(''):'<div class="sdn-directory-empty">Keine Helden mit diesen Such- und Filtereinstellungen gefunden.</div>';
     $('directoryCards').scrollTop=directoryScroll;
     $('directoryCards').querySelectorAll('[data-directory-open]').forEach(button=>button.addEventListener('click',()=>{
@@ -109,7 +115,8 @@
   function missionCard(r,compact=false){
     const heroes=reportParticipants(r);
     const closed=caseState(r)==='closed';
-    return `<div class="mission-card sdn-case-card"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><div class="mission-card-top"><span class="file-code">${safe(r.id)}</span><span class="report-status ${safe(r.status)}">${r.status==='approved'?'FREIGEGEBEN':r.status==='pending'?'ZUR FREIGABE':'ABGELEHNT'}</span></div><h3>${safe(r.title)}</h3><div class="mission-card-meta">${safe(r.date)} · ${safe(r.location||'Ohne Ortsangabe')}</div><p class="sdn-case-heroes">HELDEN: ${heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten'}</p>${r.organization?`<p class="sdn-case-extra">ORGANISATION: ${safe(r.organization)}</p>`:''}${r.villain?`<p class="sdn-case-extra">GEGNER: ${safe(r.villain)}</p>`:''}${compact?'':`<p class="sdn-case-summary">${safe(r.situation)}</p>`}<button type="button" data-open-report="${safe(r.id)}" class="mini-action">EINSATZAKTE ÖFFNEN ↗</button></div>`;
+    const badge=cardApproval(r.status==='pending',r.status==='approved',r.submittedByMe,r.status==='rejected');
+    return `<button type="button" class="mission-card sdn-case-card sdn-case-clickable" data-open-report="${safe(r.id)}" aria-label="Einsatzprotokoll ${safe(r.title)} öffnen"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><div class="mission-card-top"><span class="file-code">${safe(r.id)}</span></div><h3>${safe(r.title)}</h3><div class="mission-card-meta">${safe(r.date)} · ${safe(r.location||'Ohne Ortsangabe')}</div><p class="sdn-case-heroes">HELDEN: ${heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten'}</p>${r.organization?`<p class="sdn-case-extra">ORGANISATION: ${safe(r.organization)}</p>`:''}${r.villain?`<p class="sdn-case-extra">GEGNER: ${safe(r.villain)}</p>`:''}${compact?'':`<p class="sdn-case-summary">${safe(r.situation)}</p>`}<div class="sdn-card-approval">${badge}</div><span class="sdn-case-arrow" aria-hidden="true">↗</span></button>`;
   }
   function tabContent(c){
     switch(activeTab){
@@ -125,6 +132,12 @@
 
         case 'missions':{const missions=approvedFor(c.uid);return `<div class="tab-heading">FREIGEGEBENE EINSATZAKTEN / ${missions.length} TREFFER</div><p class="subtle-paragraph">Nur von der Spielleitung freigegebene Berichte, in denen dieser Charakter als Teilnehmer aufgeführt ist, werden hier verknüpft.</p><div class="mission-cards embedded">${missions.length?missions.map(r=>missionCard(r,true)).join(''):'<div class="missing-field">Für diese Person liegen derzeit keine freigegebenen Einsatzberichte vor.</div>'}</div><button class="mini-action under-missions" type="button" id="allMissions">ALLE EINSÄTZE ANSEHEN ↗</button>`;}
       case 'notes':return `${subsection('PERSONALNOTIZEN / FREIE EINTRÄGE',c.personalNotes)}<div class="source-note">Freitextbereich für allgemeine interne Vermerke, Beobachtungen und besondere Umstände.</div>`;
+      case 'file-notes':{
+        const list=fileNotes.filter(n=>n.characterId===c.uid);
+        const options=ownCharacters().map(author=>`<option value="${safe(author.uid)}">${safe(author.alias)} · ${safe(author.sdnId)}</option>`).join('');
+        const input=isStaff() ? `<form class="sdn-note-form" id="fileNoteForm"><label>EIGENER CHARAKTER<select name="authorCharacter" required><option value="">CHARAKTER AUSWÄHLEN</option>${options}</select></label><label>AKTENNOTIZ<textarea name="body" maxlength="5000" required rows="5" placeholder="Notiz zur Personalakte …"></textarea></label><p id="fileNoteError" class="form-error" role="alert"></p><button class="paper-quick-action" type="submit" ${options?'':'disabled'}>＋ AKTENNOTIZ ANHÄNGEN</button>${options?'':'<p class="source-note">Du benötigst einen eigenen freigegebenen Charakter, um eine Aktennotiz zu verfassen.</p>'}</form>`:'';
+        return `<div class="tab-heading">AKTENNOTIZEN / ${list.length} EINTRÄGE</div><div class="sdn-file-notes">${list.length?list.map(n=>`<article class="sdn-file-note"><p class="sdn-file-note-body">${safe(n.body)}</p><footer><strong>${safe(n.authorAlias)}</strong><time datetime="${safe(n.createdAt)}">${safe(new Date(n.createdAt).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}))}</time></footer></article>`).join(''):'<div class="missing-field">Noch keine Aktennotizen vorhanden.</div>'}</div>${input}`;
+      }
       case 'secret':return gmMode?`<div class="secret-heading">▣ TOP SECRET / AUTHORIZED PERSONNEL ONLY</div><div class="secret-paper"><div class="tab-heading">TARNIDENTITÄT</div>${recordPair('TARNIDENTITÄT VORHANDEN?',c.secret.hasCover==='yes'?'Ja':c.secret.hasCover==='no'?'Nein':'Nicht hinterlegt')}${c.secret.hasCover==='yes'?recordPair('NAME / ALIAS',c.secret.coverName):''}${subsection('ANGABEN ZUR TARNIDENTITÄT',c.secret.coverDetails)}</div><div class="source-note">Dies ist lediglich die simulierte Spielleitungsansicht. In der echten Anwendung müssen Geheimdaten serverseitig geschützt werden.</div>`:`<div class="locked-sheet"><div class="lock-icon">⌁</div><h3>TOP SECRET</h3><p>Akte gesperrt. Geheime Informationen stehen nur der berechtigten Charakterperson und der Spielleitung zur Verfügung.</p><p class="dim-text">Zur Demonstration kannst du oben die simulierte Spielleitungsansicht einschalten. Das ist keine echte Zugangskontrolle.</p></div>`;
       case 'audit':return `<div class="tab-heading">ÄNDERUNGSVERLAUF / TICKET CENTER</div><p class="subtle-paragraph">Du kannst mehrere Tickets parallel einreichen. Jeder Antrag zeigt die geänderten Felder im Vorher-nachher-Vergleich. Erst nach Freigabe wird die Akte aktualisiert; überschneidende Anträge werden auf Konflikte geprüft.</p>${c.proposals.length?`<div class="tab-heading">EINGEREICHTE TICKETS / ${c.proposals.length}</div>${c.proposals.map(p=>`<article class="ticket-card"><div class="ticket-top"><div><span class="ticket-id">${safe(p.id)}</span><h3>${safe(p.title)}</h3><small>${safe(p.time)} · ${safe(p.requestedBy||'Demo-Spieler')}</small></div><span class="report-status ${p.status==='pending'?'pending':p.status==='approved'?'approved':'rejected'}">${p.status==='pending'?'IN PRÜFUNG':p.status==='approved'?'GENEHMIGT':'ABGELEHNT'}</span></div>${p.priority?'<div class="priority-label">⚠ WICHTIG FÜR DIE SPIELLEITUNG · ATTRIBUTE / FÄHIGKEITEN BETROFFEN</div>':''}${p.portraitPreview&&live&&backend.proposalImageUrl(p.portraitPreview)?`<div class="ticket-portrait-compare"><span>BEANTRAGTES PORTRAIT / VORSCHAU</span><img src="${safe(backend.proposalImageUrl(p.portraitPreview))}" alt="Zur Prüfung eingereichtes Portrait" loading="lazy"/></div>`:''}<div class="ticket-comment"><span>BEGRÜNDUNG / ANMERKUNG</span><p>${safe(p.comment||'Keine Anmerkung hinzugefügt.')}</p></div><div class="ticket-difflist">${(p.changes||[]).map(d=>`<div class="ticket-diff ${d.category==='normal'?'':'ticket-sensitive'}"><div class="ticket-diff-label">${d.category==='attribute'?'⚠ ATTRIBUTE · ':d.category==='ability'?'⚠ FÄHIGKEITEN · ':''}${safe(d.label)}</div><div class="ticket-beforeafter"><div><small>VORHER</small><pre>${safe(d.before||'—')}</pre></div><div><small>BEANTRAGT</small><pre>${safe(d.after||'—')}</pre></div></div></div>`).join('')||'<p>Keine Felder aufgelistet.</p>'}</div>${p.status==='pending'&&ticketConflicts(c,p).length?`<div class="ticket-conflict"><strong>⚠ KONFLIKT MIT EINER BEREITS FREIGEGEBENEN ÄNDERUNG</strong><p>${ticketConflicts(c,p).map(safe).join(' · ')}</p><small>Die betroffenen Änderungen bitte erneut auf dem neuesten Aktenstand einreichen. Die bestehende Akte wird nicht überschrieben.</small></div>`:''}${gmMode&&p.status==='pending'?`<div class="ticket-review"><strong>ENTSCHEIDUNG DER SPIELLEITUNG</strong><div class="action-pair"><button data-review-change="${safe(p.id)}:approve" type="button" ${ticketConflicts(c,p).length?'disabled title="Konflikt – nicht automatisch genehmigbar"':''}>✓ GESAMTES TICKET GENEHMIGEN</button><button data-review-change="${safe(p.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}</article>`).join('')}`:'<div class="missing-field">Noch keine Änderungsanträge vorhanden.</div>'}<div class="tab-heading spaced-heading">AKTENEREIGNISSE</div>${c.changeLog.length?c.changeLog.map(entry=>`<div class="audit-entry"><b>${safe(entry.title)}</b><p>${entry.fields.map(f=>safe(f)).join(', ')||'Statusaktualisierung'}</p><small>${safe(entry.time)}</small></div>`).join(''):'<div class="missing-field">Für diesen Charakter liegen noch keine Teständerungen vor.</div>'}<div class="source-note">Alle Online-Tickets und Freigaben werden protokolliert. Konfliktprüfungen laufen auch serverseitig.</div>`;
 
@@ -146,6 +159,23 @@
       catch(e){button.disabled=false;alert('GitHub-Veröffentlichung fehlgeschlagen: '+e.message);}
     }));
     document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{activeTab=b.dataset.tab;renderRecord();}));
+    $('fileNoteForm')?.addEventListener('submit',async e=>{
+      e.preventDefault();
+      if(!isStaff())return;
+      const form=e.currentTarget, authorId=form.elements.authorCharacter.value, body=form.elements.body.value.trim();
+      const error=$('fileNoteError'); error.textContent='';
+      if(!ownCharacters().some(ch=>ch.uid===authorId)){error.textContent='Bitte einen eigenen freigegebenen Charakter auswählen.';return;}
+      if(!body||body.length>5000){error.textContent='Bitte eine Notiz mit maximal 5.000 Zeichen eingeben.';return;}
+      const button=form.querySelector('button[type="submit"]'); button.disabled=true;
+      try{
+        if(live){await backend.addFileNote(c.uid,authorId,body);await reloadRemote();}
+        else{
+          const author=characters.find(ch=>ch.uid===authorId);
+          fileNotes.unshift({id:'local-'+Date.now(),characterId:c.uid,authorId,authorAlias:author.alias,body,createdAt:new Date().toISOString()});
+          renderRecord();
+        }
+      }catch(ex){button.disabled=false;error.textContent='Notiz nicht gespeichert: '+ex.message;}
+    });
     $('allMissions')?.addEventListener('click',()=>navigate('missions'));
     attachOpenReport($('recordBody'));
     document.querySelectorAll('[data-open-related]').forEach(b=>b.addEventListener('click',()=>{
@@ -222,7 +252,7 @@
   }
   function reportDetail(r){
     const participants=r.participants.map(id=>characters.find(c=>c.uid===id)).filter(Boolean);
-    return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><div class="sdn-case-stamp ${caseState(r)==='closed'?'is-closed':'is-open'}">${caseState(r)==='closed'?'ABGESCHLOSSEN':'FALL OFFEN'}</div></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZDATUM',r.date],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]],['ORGANISATION',r.organization||'—'],['GEGNER / SCHURKE',r.villain||'—']].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${paragraph(r.damages)}${subsection('04 / ZUSATZVERMERKE',r.notes)}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${gmMode&&r.status==='pending'?`<div class="review-box"><strong>SPIELLEITUNG / DEMO-FREIGABE</strong><p>Die Verknüpfung zur Personalakte wird erst bei Freigabe sichtbar.</p><div class="action-pair"><button data-review-report="${safe(r.id)}:approve" type="button">✓ BERICHT FREIGEBEN</button><button data-review-report="${safe(r.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}<div class="source-note">Einsatzberichte werden nach Freigabe mit den beteiligten Akten verknüpft.</div></div></article>`;
+    return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><div class="sdn-report-detail-stamps"><div class="classification approval-stamp ${r.status==='approved'?'approved':'pending'}">${r.status==='approved'?'APPROVED':r.status==='pending'?'PENDING':'REJECTED'}<small>${r.status==='approved'?'SDN · VERIFIZIERT':r.status==='pending'?'REVIEW REQUIRED':'NICHT FREIGEGEBEN'}</small></div><div class="sdn-case-stamp ${caseState(r)==='closed'?'is-closed':'is-open'}">${caseState(r)==='closed'?'ABGESCHLOSSEN':'FALL OFFEN'}</div></div></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZDATUM',r.date],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]],['ORGANISATION',r.organization||'—'],['GEGNER / SCHURKE',r.villain||'—']].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${paragraph(r.damages)}${subsection('04 / ZUSATZVERMERKE',r.notes)}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${gmMode&&r.status==='pending'?`<div class="review-box"><strong>SPIELLEITUNG / FREIGABE</strong><p>Die Verknüpfung zur Personalakte wird erst bei Freigabe sichtbar.</p><div class="action-pair"><button data-review-report="${safe(r.id)}:approve" type="button">✓ BERICHT FREIGEBEN</button><button data-review-report="${safe(r.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}<div class="source-note">Einsatzberichte werden nach Freigabe mit den beteiligten Akten verknüpft.</div></div></article>`;
   }
   function navigate(to){
     view=to;
@@ -439,7 +469,7 @@
   }
   function reset(){if(live)return;if(!confirm('Alle Änderungen, Bilder, Protokolle und Freigaben der Demo-Sitzung zurücksetzen?'))return;
     characters=[clone(BASE)];reports=clone(REPORTS);selectedId=BASE.uid;activeTab='identity';view='directory';gmMode=false;nextChar=1;nextMission=3;nextTicket=1;reportFocus=null;missionFilter='all';directoryScroll=0;missionScroll=0;renderGM();navigate('directory');}
-  function renderGM(){$('gmToggle').textContent=live?(gmMode?'SPIELLEITUNG · ABMELDEN':'MITGLIED · ABMELDEN'):(gmMode?'SPIELLEITUNG · DEMO':'SPIELERANSICHT');$('gmToggle').classList.toggle('is-gm',gmMode);}
+  function renderGM(){$('gmToggle').textContent=live?(gmMode?'SPIELLEITUNG · ABMELDEN':hrMode?'HR · ABMELDEN':'MITGLIED · ABMELDEN'):(gmMode?'SPIELLEITUNG · DEMO':'SPIELERANSICHT');$('gmToggle').classList.toggle('is-gm',gmMode);}
 
   $('directorySearch').addEventListener('input',()=>{directoryScroll=0;renderDirectory();});
   $('directoryFilter').addEventListener('change',e=>{directoryFilter=e.target.value;directoryScroll=0;renderDirectory();});
@@ -470,7 +500,7 @@
   document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();navigate('directory');$('directorySearch').focus();}});
   async function reloadRemote(){
     const data=await backend.loadAll();
-    characters=data.characters;reports=data.reports;
+    characters=data.characters;reports=data.reports;fileNotes=data.fileNotes||[];
     if(!characters.some(c=>c.uid===selectedId))selectedId=characters[0]?.uid||'';
     if(view==='missions'||view==='mission-detail')renderMissions();else if(view==='directory')renderDirectory();else renderAll();
   }
@@ -489,7 +519,7 @@
       if(!sess){showGate('PERSONNEL ACCESS','Nur Mitglieder des Discord-RP-Servers dürfen Personalakten lesen.',true);return;}
       const role=await backend.verify();
       if(!role.member){showGate('ACCESS DENIED','Dieser Discord-Account ist kein bestätigtes Mitglied des RP-Servers.');return;}
-      gmMode=role.admin;renderGM();
+      gmMode=role.admin;hrMode=Boolean(role.hr);renderGM();
       await reloadRemote();navigate('directory');
       $('authGate').hidden=true;document.body.classList.remove('secure-locked');
       $('privacyInfo').hidden=true;
@@ -497,7 +527,7 @@
       document.querySelector('.sync-indicator').innerHTML='<i></i> SERVER CONNECTED';
       document.querySelector('.session-marker').textContent='DISCORD SESSION';
       setInterval(async()=>{
-        try{const fresh=await backend.verify();if(!fresh.member){showGate('ACCESS REVOKED','Die Mitgliedschaft wurde nicht mehr bestätigt.');return;}gmMode=fresh.admin;renderGM();}
+        try{const fresh=await backend.verify();if(!fresh.member){showGate('ACCESS REVOKED','Die Mitgliedschaft wurde nicht mehr bestätigt.');return;}gmMode=fresh.admin;hrMode=Boolean(fresh.hr);renderGM();}
         catch{showGate('ACCESS PAUSED','Sicherheitsprüfung nicht möglich. Bitte Seite neu laden.');}
       },2*60*1000);
     }catch(error){showGate('VERBINDUNG FEHLGESCHLAGEN',error.message);}

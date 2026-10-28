@@ -6,6 +6,8 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('S
 const DISCORD_TOKEN = Deno.env.get('DISCORD_BOT_TOKEN')!;
 const DISCORD_GUILD = Deno.env.get('DISCORD_GUILD_ID')!;
 const GM_ROLE = Deno.env.get('DISCORD_GM_ROLE_ID')!;
+// Optional independent HR role. Leave unset if HR should not yet be enabled.
+const HR_ROLE = Deno.env.get('DISCORD_HR_ROLE_ID') ?? ''; 
 const ALLOWED_ORIGINS = (Deno.env.get('SDN_ALLOWED_ORIGINS') ?? 'http://localhost:8000').split(',').map(s => s.trim()).filter(Boolean);
 
 function cors(origin: string | null): Record<string, string> {
@@ -56,12 +58,14 @@ Deno.serve(async request => {
     const member = response.ok ? await response.json() : null;
     const verified = Boolean(member && member.pending !== true);
     const isAdmin = verified && Array.isArray(member.roles) && member.roles.includes(GM_ROLE);
+    const isHR = verified && Boolean(HR_ROLE) && Array.isArray(member.roles) && member.roles.includes(HR_ROLE);
     const checkedAt = new Date();
     const expires = new Date(checkedAt.getTime() + (verified ? 5 * 60_000 : 0));
     const { error: updateError } = await admin.from('sdn_access').upsert({
       user_id: user.id,
       discord_id: discordId,
       is_admin: Boolean(isAdmin),
+      is_hr: Boolean(isHR),
       checked_at: checkedAt.toISOString(),
       verified_until: expires.toISOString(),
     });
@@ -77,7 +81,7 @@ Deno.serve(async request => {
       });
       if (profileError) return respond(503, { error: 'Cannot update verified Discord profile' });
     }
-    return respond(200, { member: verified, admin: Boolean(isAdmin), expiresAt: expires.toISOString() });
+    return respond(200, { member: verified, admin: Boolean(isAdmin), hr: Boolean(isHR), expiresAt: expires.toISOString() });
   } catch {
     return respond(503, { error: 'Discord membership check could not be completed' });
   }
