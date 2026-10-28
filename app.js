@@ -12,7 +12,7 @@
   const POSITION_CLASS = {'Superheld':'superheld','Dispatcher':'dispatcher','Teamleiter':'teamleiter','Manager':'manager','Standortleitung':'standortleitung','Standortleiter':'standortleitung','Techniker':'techniker','Arzt':'arzt'};
   const positionName = c => String(c?.role||'').trim();
   const positionClass = c => POSITION_CLASS[positionName(c)] || 'unbekannt';
-  const TABS = [['identity','01 IDENTITÄT'],['attributes','02 ATTRIBUTE'],['abilities','03 FÄHIGKEITEN'],['personality','04 PERSÖNLICHKEIT'],['history','05 HISTORIE'],['relationships','06 BEZIEHUNGEN'],['missions','07 EINSÄTZE'],['file-notes','08 AKTENNOTIZ'],['secret','09 TOP SECRET']];
+  const TABS = [['identity','01 IDENTITÄT'],['attributes','02 SKILLMATRIX'],['abilities','03 FÄHIGKEITEN'],['equipment','04 AUSRÜSTUNG'],['personality','05 PSYCHOLOGISCHES GUTACHTEN'],['history','06 HISTORIE'],['medical','07 KRANKENAKTE'],['relationships','08 BEZIEHUNGEN'],['missions','09 EINSÄTZE'],['file-notes','10 AKTENNOTIZ'],['secret','11 TOP SECRET']];
   const OUTCOMES = {success:'ERFOLGREICH ABGESCHLOSSEN', partial:'TEILWEISE ERFOLGREICH',failure:'NICHT ERFOLGREICH',open:'NOCH OFFEN'};
   const REPORT_LEVELS = ['E','D','C','B','A','S'];
   const reportLevelText = value => REPORT_LEVELS.includes(String(value||'').toUpperCase()) ? 'LEVEL '+String(value).toUpperCase() : 'NICHT EINGESTUFT';
@@ -20,7 +20,7 @@
   const DAMAGE = {no:'Keine bekannten Schäden',yes:'Schäden dokumentiert',unknown:'Noch ungeklärt'};
   // Blank form template ONLY. The online site must NEVER ship character records.
   const BASE = {
-    uid:'',alias:'',name:'',sdnId:'',role:'',hasSecretIdentity:'',affiliation:'S.D.N.',activityStatus:'',
+    uid:'',alias:'',name:'',sdnId:'',role:'',hasSecretIdentity:'',activityStatus:'',raceType:'',raceName:'',raceOrigin:'',raceFeatures:'',skillNotes:'',equipmentItems:'',costumeDescription:'',
     height:'',weight:'',age:'',sex:'',blood:'',birthplace:'',birthday:'',player:'',discordChannelUrl:'',
     status:'draft',classCode:'—',
     appearance:{hair:'',eyes:'',build:'',skin:'',distinguishing:'',description:'',impression:''},
@@ -36,15 +36,15 @@
   let directoryFilter='all', directoryPosition='all', directorySort='new', missionOwnership='all', missionCase='all', missionSort='new', missionSearch='';
   let directoryScroll=0, missionScroll=0;
   let editTarget=null,editNew=false,nextChar=1,nextMission=1,nextTicket=1,reportFocus=null,missionFilter='all',reportEditTarget=null;
-  let stagedPortrait=null, portraitPreviewUrl=null;
+  let stagedPortrait=null, portraitPreviewUrl=null, revealedCivilNameFor=null;
   const backend=window.SDNBackend;
   const live=Boolean(backend?.enabled);
   const picked = () => characters.find(c=>c.uid===selectedId) || characters[0];
-  const total = c => STAT_KEYS.reduce((v,[k])=>v+Number(c.stats[k]||0),0);
+  const total = c => STAT_KEYS.reduce((v,[k])=>v+Number(c?.stats?.[k]||0),0);
   const stamp = () => new Date().toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'});
-  const editableKeys = ['name','alias','role','hasSecretIdentity','height','weight','age','sex','birthplace','birthday','discordChannelUrl','classCode','hair','eyes','build','skin','distinguishing','description','impression','character','motivation','behavior','assessment','likes','dislikes','background','criminalRecord','formerAffiliations','medicalConditions','medicalInjuries','medicalTreatments','medicalAllergies','powerName','origin','powerDescription','weaknesses','generalWeaknesses','generalStrengths','generalAbilities'];
+  const editableKeys = ['name','alias','role','hasSecretIdentity','height','weight','age','sex','birthplace','birthday','discordChannelUrl','classCode','raceType','raceName','raceOrigin','raceFeatures','skillNotes','equipmentItems','costumeDescription','hair','eyes','build','skin','distinguishing','description','impression','character','motivation','behavior','assessment','likes','dislikes','background','criminalRecord','formerAffiliations','medicalConditions','medicalInjuries','medicalTreatments','medicalAllergies','powerName','origin','powerDescription','weaknesses','generalWeaknesses','generalStrengths','generalAbilities'];
   const secretEditKeys = ['notes'];
-  const fieldNames = {name:'Name',alias:'Alias',role:'Position',hasSecretIdentity:'Geheime Identität',height:'Größe',weight:'Gewicht',age:'Alter',sex:'Geschlecht',birthplace:'Geburtsort',birthday:'Geburtstag',discordChannelUrl:'Discord-Charakterkanal (URL)',classCode:'Fähigkeitsklasse',hair:'Haarfarbe',eyes:'Augenfarbe',build:'Statur',skin:'Teint',distinguishing:'Besondere Merkmale',description:'Beschreibung des Aussehens',impression:'Besonderheiten',character:'Persönlichkeit',motivation:'Motivation',behavior:'Sozialverhalten',assessment:'Psychologisches Gutachten',likes:'Likes',dislikes:'Dislikes',background:'Hintergrundgeschichte',criminalRecord:'Strafregister',formerAffiliations:'Ehemalige Zugehörigkeiten',medicalConditions:'Vorerkrankungen / Dauerhafte Beschwerden',medicalInjuries:'Verletzungen / Medizinische Vorfälle',medicalTreatments:'Behandlungen / Operationen',medicalAllergies:'Allergien / Medizinische Einschränkungen',powerName:'Fähigkeitsname',origin:'Ursprung',powerDescription:'Beschreibung',weaknesses:'Schwächen',generalWeaknesses:'Allgemeine Schwächen',generalStrengths:'Allgemeine Stärken',generalAbilities:'Sonstige allgemeine Fähigkeiten',notes:'TOP SECRET'};
+  const fieldNames = {name:'Name',alias:'Alias',role:'Position',hasSecretIdentity:'Geheime Identität',height:'Größe',weight:'Gewicht',age:'Alter',sex:'Geschlecht',birthplace:'Geburtsort',birthday:'Geburtstag',discordChannelUrl:'Discord-Charakterkanal (URL)',classCode:'Fähigkeitsklasse',raceType:'Rasse',raceName:'Bezeichnung der Rasse',raceOrigin:'Herkunft der Rasse',raceFeatures:'Besonderheiten der Rasse',skillNotes:'Anmerkungen zur Skillmatrix',equipmentItems:'Ausstattung',costumeDescription:'Superheldenkostüm',hair:'Haarfarbe',eyes:'Augenfarbe',build:'Statur',skin:'Teint',distinguishing:'Besondere Merkmale',description:'Beschreibung des Aussehens',impression:'Besonderheiten',character:'Persönlichkeit',motivation:'Motivation',behavior:'Sozialverhalten',assessment:'Psychologisches Gutachten',likes:'Likes',dislikes:'Dislikes',background:'Hintergrundgeschichte',criminalRecord:'Strafregister',formerAffiliations:'Ehemalige Zugehörigkeiten',medicalConditions:'Vorerkrankungen / Dauerhafte Beschwerden',medicalInjuries:'Verletzungen / Medizinische Vorfälle',medicalTreatments:'Behandlungen / Operationen',medicalAllergies:'Allergien / Medizinische Einschränkungen',powerName:'Fähigkeitsname',origin:'Ursprung',powerDescription:'Beschreibung',weaknesses:'Schwächen',generalWeaknesses:'Allgemeine Schwächen',generalStrengths:'Allgemeine Stärken',generalAbilities:'Sonstige allgemeine Fähigkeiten',notes:'TOP SECRET'};
   const sensitiveKeys = new Set(['classCode','powerName','origin','powerDescription','weaknesses','generalWeaknesses','generalStrengths','generalAbilities','powers','stats']);
   const secretKeys = new Set(['notes']);
   const valueText = v => v === null || v === '' || v === undefined ? 'Keine Daten vorhanden' : typeof v==='object' ? JSON.stringify(v,null,2) : String(v);
@@ -54,8 +54,8 @@
   const pendingCount = c => c.proposals.filter(p=>p.status==='pending').length;
   const categoryFor = key => key==='stats'?'attribute':sensitiveKeys.has(key)?'ability':'normal';
   const fieldLocation = key => key in BASE.appearance?'appearance':key in BASE.personality?'personality':key in BASE.history?'history':secretKeys.has(key)?'secret':'root';
-  const fieldValue = (c,key) => {const loc=fieldLocation(key);return loc==='root'?c[key]:c[loc]?.[key];};
-  const setField = (c,key,value) => {const loc=fieldLocation(key);if(loc==='root')c[key]=value;else c[loc][key]=value;};
+  const fieldValue = (c,key) => {const loc=fieldLocation(key);return loc==='root'?c?.[key]:c?.[loc]?.[key];};
+  const setField = (c,key,value) => {const loc=fieldLocation(key);if(loc==='root')c[key]=value;else {c[loc] ||= {};c[loc][key]=value;}};
   const logChange = (c,title,fields=[]) => {c.changeLog.unshift({title,fields,time:stamp()});};
   const currentMission = id => reports.find(r=>r.id===id);
   const approvedFor = uid => reports.filter(r=>r.status==='approved' && ((r.participants||[]).includes(uid) || r.dispatcherId===uid));
@@ -136,11 +136,18 @@
     let axes='';for(let i=0;i<5;i++){const [x,y]=pt(i,10);axes+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#b7c0af" stroke-width=".8"/>`;}
     const values=STAT_KEYS.map(([k])=>Number(c.stats[k]||0));
     const ticks=values.map((v,i)=>{const [x,y]=pt(i,v);return `<circle cx="${x}" cy="${y}" r="4.5" fill="#ff9241" stroke="#253932" stroke-width="1.5"/>`}).join('');
-    const labels=STAT_KEYS.map(([key,label],i)=>{const a=-Math.PI/2+2*Math.PI*i/5;const x=cx+Math.cos(a)*150,y=cy+Math.sin(a)*136;return `<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" fill="#263b34" text-anchor="middle" font-size="11" font-family="monospace" font-weight="800">${label}</text><text x="${x.toFixed(1)}" y="${(y+17).toFixed(1)}" fill="#aa6937" text-anchor="middle" font-size="10" font-family="monospace" font-weight="800">${safe(statLabel(c.stats[key]))}${c.stats[key] == null?'':'/10'}</text>`}).join('');
+    const icons=[
+      '<path d="M-9 -2h18M-11 -6v8M-7 -9v14M7 -9v14M11 -6v8"/>',
+      '<path d="M0 -12l9 3v8c0 6-5 9-9 12-4-3-9-6-9-12v-8z"/>',
+      '<path d="M-11 3l7-6 5 3 6-9M2 -9h5v5"/>',
+      '<path d="M-10 -8h20v17H-10zM-7 -4h14M-7 1h9M-7 5h14"/>',
+      '<path d="M0 -11c-5-3-10 1-10 5-4 3-2 9 3 10 0 5 7 7 7 3 0 4 7 2 7-3 5-1 7-7 3-10 0-4-5-8-10-5v18M-8 -2l5 3M8 -2L3 1"/>'
+    ];
+    const labels=STAT_KEYS.map(([key,label],i)=>{const a=-Math.PI/2+2*Math.PI*i/5;const x=cx+Math.cos(a)*150,y=cy+Math.sin(a)*136;return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})" class="sdn-radar-symbol" aria-label="${safe(label)}"><title>${safe(label)}</title>${icons[i]}</g>`}).join('');
     return `<div class="radar-wrap"><svg class="radar-svg" viewBox="0 0 380 337" role="img" aria-label="Radar-Diagramm: ${STAT_KEYS.map(([k,n])=>`${n} ${c.stats[k]} von 10`).join(', ')}"><polygon points="${polygon([10,10,10,10,10])}" fill="#e0e8d8" fill-opacity=".6"/>${grid}${axes}<polygon points="${polygon(values)}" fill="#d9813e" fill-opacity=".26" stroke="#db7530" stroke-width="3" stroke-linejoin="round"/>${ticks}${labels}</svg></div>`;
   }
   function statBars(c){return `<div class="stat-box"><div class="stat-box-header">ATTRIBUTE EVALUATION <span>${total(c)} / 27 PTS</span></div>${STAT_KEYS.map(([k,n])=>`<div class="stat-row"><span>${n}</span><div><b style="width:${Number(c.stats[k]||0)*10}%"></b></div><strong>${safe(statLabel(c.stats[k]))}${c.stats[k] == null?'':'/10'}</strong></div>`).join('')}<div class="stat-foot">WERTE VON 0,5 BIS 10 · 0,5ER-SCHRITTE · MAXIMAL 27 PUNKTE<br>Bei Erstanträgen maximal 15 Punkte und 6 pro Attribut.</div></div>`;}
-  function recordPair(label,value){return `<div class="small-record"><small>${safe(label)}</small><strong>${show(value)}</strong></div>`;}
+  function recordPair(label,value){return `<div class="small-record"><small>${safe(label)}</small><strong>${label==='BÜRGERLICHER NAME' && String(value).includes('sdn-spoiler') ? value : label==='BÜRGERLICHER NAME' && String(value).startsWith('<span>') ? value : show(value)}</strong></div>`;}
   function subsection(label,value){return `<div class="dossier-section"><div class="tab-heading">${safe(label)}</div>${paragraph(value)}</div>`;}
   function missionCard(r,compact=false){
     const heroes=reportParticipants(r);
@@ -151,11 +158,40 @@
   }
   function tabContent(c){
     switch(activeTab){
-      case 'identity':return `<div class="tab-heading">ERSCHEINUNGSBILD / VISUAL IDENTIFICATION</div><div class="appearance-facts">${[['HAARFARBE',c.appearance.hair],['AUGENFARBE',c.appearance.eyes],['STATUR',c.appearance.build],['HAUT / TEINT',c.appearance.skin],['BESONDERE MERKMALE',c.appearance.distinguishing],['GRÖSSE',c.height]].map(([k,v])=>recordPair(k,v)).join('')}</div>${subsection('AUSSEHEN / BESCHREIBUNG',c.appearance.description)}${subsection('BESONDERHEITEN',c.appearance.impression)}`;
-      case 'attributes':return `<div class="tab-heading">ATTRIBUTE / PERFORMANCE PROFILE</div><div class="radar-layout">${radar(c)}<div><div class="score-large">${total(c)} <small>/ 27 PUNKTE</small></div><p class="subtle-paragraph">Radarprofil der fünf Dispatch-Attribute. Attribute steigen in 0,5er-Schritten von 0,5 bis 10. Bei Änderungen gelten maximal 27 Gesamtpunkte.</p>${statBars(c)}${c.proposals.some(p=>p.status==='pending')?'<p class="pending-hint">Änderungsantrag offen: neue Werte erscheinen erst nach Freigabe.</p>':''}</div></div>`;
-      case 'abilities':return `<div class="tab-heading">FÄHIGKEITSAKTE / POWER ASSESSMENT</div><div class="abilities-head">${[['FÄHIGKEIT',c.powerName],['URSPRUNG',c.origin],['KLASSIFIZIERUNG','KLASSE '+c.classCode]].map(([k,v])=>recordPair(k,v)).join('')}</div>${subsection('BESCHREIBUNG',c.powerDescription)}<div class="tab-heading">MOVES / ANGRIFFE / UNTERFÄHIGKEITEN</div>${c.powers.length?`<div class="power-summary">${c.powers.map(p=>`<div class="power-card"><b>${safe(p.title)}</b><p>${safe(p.text)}</p></div>`).join('')}</div>`:'<div class="missing-field">Noch keine Einzelfähigkeiten eingetragen.</div>'}<div class="tab-heading spaced-heading">SCHWÄCHEN / EINSCHRÄNKUNGEN</div><div class="weakness-block">${show(c.weaknesses)}</div>${subsection('ALLGEMEINE SCHWÄCHEN',c.generalWeaknesses)}${subsection('ALLGEMEINE STÄRKEN',c.generalStrengths)}${subsection('SONSTIGE ALLGEMEINE FÄHIGKEITEN',c.generalAbilities)}`;
-      case 'personality':return `${subsection('PERSÖNLICHKEIT / CHARAKTER',c.personality.character)}${subsection('MOTIVATION / ZIELE',c.personality.motivation)}${subsection('VERHALTEN / SOZIALPROFIL',c.personality.behavior)}${subsection('PSYCHOLOGISCHE EINSCHÄTZUNG',c.personality.assessment)}${subsection('LIKES',c.personality.likes)}${subsection('DISLIKES',c.personality.dislikes)}`;
-      case 'history':return `${subsection('BIOGRAFIE / HINTERGRUNDGESCHICHTE',c.history.background)}${subsection('STRAFREGISTER / RECHTLICHE VORFÄLLE',c.history.criminalRecord)}${subsection('FRÜHERE ZUGEHÖRIGKEITEN',c.history.formerAffiliations)}<div class="medical-file"><div class="medical-file-head"><span>✚ MEDICAL RECORD</span><small>TEIL DER PERSONALHISTORIE</small></div><div class="appearance-facts">${recordPair('VORERKRANKUNGEN',c.history.medicalConditions)}${recordPair('ALLERGIEN / EINSCHRÄNKUNGEN',c.history.medicalAllergies)}</div>${subsection('VERLETZUNGEN / MEDIZINISCHE VORFÄLLE',c.history.medicalInjuries)}${subsection('BEHANDLUNGEN / OPERATIONEN',c.history.medicalTreatments)}</div>`;
+      case 'identity': {
+        const raceType=String(c.raceType||'');
+        const civil=c.hasSecretIdentity==='yes' && revealedCivilNameFor!==c.uid
+          ? `<span class="sdn-spoiler">•••••••• <button type="button" data-reveal-name="true" aria-label="Bürgerlichen Namen anzeigen">ANZEIGEN</button></span>`
+          : `<span>${show(c.name)}</span>${c.hasSecretIdentity==='yes'?` <button type="button" class="sdn-hide-name" data-reveal-name="true">VERBERGEN</button>`:''}`;
+        return `<div class="sdn-section-intro"><small>01 / PERSONENDATEN</small><h3>Identität</h3></div><div class="sdn-doc-grid">
+          <div class="sdn-doc-column"><section class="sdn-paper-card"><h4>PERSONENDATEN</h4><div class="sdn-fact-lines">
+            ${recordPair('BÜRGERLICHER NAME',civil)}
+            ${recordPair('GEHEIME IDENTITÄT',c.hasSecretIdentity==='yes'?'Ja':c.hasSecretIdentity==='no'?'Nein':'')}
+            ${recordPair('ALTER',c.age)}${recordPair('GEBURTSTAG',c.birthday)}${recordPair('GEBURTSORT',c.birthplace)}
+            ${recordPair('GRÖSSE',c.height)}${recordPair('GEWICHT',c.weight)}</div></section>
+            <section class="sdn-paper-card"><h4>RASSE</h4><div class="sdn-fact-lines">${recordPair('RASSE',raceType==='human'?'Mensch':raceType==='other'?'Andere':'')}
+              ${raceType==='other' ? `${recordPair('BEZEICHNUNG',c.raceName)}${recordPair('HERKUNFT DER RASSE',c.raceOrigin)}${recordPair('BESONDERHEITEN DER RASSE',c.raceFeatures)}` : ''}</div></section>
+          </div><div class="sdn-doc-column"><section class="sdn-paper-card"><h4>ÄUSSERE MERKMALE</h4><div class="sdn-fact-lines">
+            ${recordPair('HAARFARBE',c.appearance?.hair)}${recordPair('AUGENFARBE',c.appearance?.eyes)}
+            ${recordPair('STATUR',c.appearance?.build)}${recordPair('HAUT / TEINT',c.appearance?.skin)}
+            ${recordPair('BESONDERE MERKMALE',c.appearance?.distinguishing)}</div></section>
+            <section class="sdn-paper-card"><h4>ERSCHEINUNGSBILD</h4>${paragraph(c.appearance?.description)}</section>
+            <section class="sdn-paper-card"><h4>BESONDERHEITEN</h4>${paragraph(c.appearance?.impression)}</section>
+          </div></div>`;
+      }
+      case 'attributes':return `<div class="sdn-section-intro"><small>02 / PERSONALBEWERTUNG</small><h3>Skillmatrix</h3></div><div class="sdn-skill-layout"><div class="sdn-skill-radar">${radar(c)}</div><div class="sdn-skill-side">${statBars(c)}<section class="sdn-paper-card sdn-skill-note"><h4>ANMERKUNGEN</h4>${paragraph(c.skillNotes)}</section>${c.proposals.some(p=>p.status==='pending')?'<p class="pending-hint">Neue Werte werden erst nach Freigabe sichtbar.</p>':''}</div></div>`;
+      case 'abilities':return `<div class="sdn-section-intro"><small>03 / FÄHIGKEITSPROFIL</small><h3>Fähigkeiten</h3></div><div class="sdn-ability-stack">
+        <section class="sdn-ability-area"><div class="sdn-ability-header"><small>01 / SPEZIALFÄHIGKEIT</small><h4>Individuelle Fähigkeit</h4></div><div class="sdn-ability-facts">${recordPair('FÄHIGKEIT',c.powerName)}${recordPair('KLASSE',c.classCode)}${recordPair('URSPRUNG',c.origin)}</div>
+          ${subsection('BESCHREIBUNG',c.powerDescription)}${subsection('SCHWÄCHEN DER SPEZIALFÄHIGKEIT',c.weaknesses)}
+          <div class="tab-heading">MOVES / ANGRIFFE / UNTERFÄHIGKEITEN</div>
+          ${c.powers?.length?`<div class="sdn-move-list">${c.powers.map((p,i)=>`<div class="sdn-move"><span>${String(i+1).padStart(2,'0')}</span><div><strong>${show(p.title)}</strong>${paragraph(p.text)}</div></div>`).join('')}</div>`:'<div class="missing-field">Keine Daten vorhanden</div>'}
+        </section><section class="sdn-ability-area sdn-general-area"><div class="sdn-ability-header"><small>02 / ALLGEMEINES PROFIL</small><h4>Allgemeine Eigenschaften</h4></div>
+          ${subsection('ALLGEMEINE STÄRKEN',c.generalStrengths)}${subsection('ALLGEMEINE SCHWÄCHEN',c.generalWeaknesses)}${subsection('SONSTIGE ALLGEMEINE FÄHIGKEITEN',c.generalAbilities)}
+        </section></div>`;
+      case 'equipment':return `<div class="sdn-section-intro"><small>04 / MATERIAL UND BEKLEIDUNG</small><h3>Ausrüstung</h3></div><div class="sdn-equipment-grid"><section class="sdn-paper-card"><h4>AUSSTATTUNG</h4>${paragraph(c.equipmentItems)}</section><section class="sdn-paper-card"><h4>SUPERHELDENKOSTÜM</h4>${paragraph(c.costumeDescription)}</section></div>`;
+      case 'personality':return `<div class="sdn-section-intro"><small>05 / PERSONALBEURTEILUNG</small><h3>Psychologisches Gutachten</h3></div><div class="sdn-doc-grid"><div class="sdn-doc-column">${subsection('PERSÖNLICHKEIT',c.personality?.character)}${subsection('MOTIVATION',c.personality?.motivation)}${subsection('VERHALTEN',c.personality?.behavior)}</div><div class="sdn-doc-column">${subsection('PSYCHOLOGISCHE EINSCHÄTZUNG',c.personality?.assessment)}${subsection('LIKES',c.personality?.likes)}${subsection('DISLIKES',c.personality?.dislikes)}</div></div>`;
+      case 'history':return `<div class="sdn-section-intro"><small>06 / HISTORISCHE ANGABEN</small><h3>Historie</h3></div>${subsection('HINTERGRUNDGESCHICHTE',c.history?.background)}${subsection('STRAFREGISTER',c.history?.criminalRecord)}${subsection('EHEMALIGE ZUGEHÖRIGKEITEN',c.history?.formerAffiliations)}`;
+      case 'medical':return `<div class="sdn-section-intro"><small>07 / MEDIZINISCHE AKTE</small><h3>Krankenakte</h3></div><div class="sdn-doc-grid"><div class="sdn-doc-column">${subsection('VORERKRANKUNGEN',c.history?.medicalConditions)}${subsection('ALLERGIEN / EINSCHRÄNKUNGEN',c.history?.medicalAllergies)}</div><div class="sdn-doc-column">${subsection('VERLETZUNGEN / VORFÄLLE',c.history?.medicalInjuries)}${subsection('BEHANDLUNGEN / OPERATIONEN',c.history?.medicalTreatments)}</div></div>`;
       case 'relationships':{
         if(c.status!=='approved')return '<div class="missing-field">Bekanntschaften können erst nach der Freigabe der Personalakte eingetragen werden.</div>';
         const linked=(c.relationships||[]).map(rel=>({rel,target:characters.find(ch=>ch.uid===rel.targetId)})).filter(item=>item.target);
@@ -187,12 +223,26 @@
     $('approveButton').textContent=c.status==='approved'?'FREIGABE ZURÜCKZIEHEN':'AKTE FREIGEBEN ✓';
     const tabs=[...TABS.filter(([id])=>id!=='secret'||(gmMode&&(!live||c._canReadSecret))),...(activeTab==='audit'?[['audit','11 ÄNDERUNGEN']]:[])];
     if(activeTab==='secret'&&!gmMode)activeTab='identity';
-    $('recordBody').innerHTML=`<article class="paper-frame"><div class="paper-mast"><div><div class="paper-wordmark">S<span>D</span>N<span>.</span></div><small>SUPERHERO DISPATCH NETWORK</small></div><div class="paper-serial">FILE NO. <b>${safe(c.sdnId)}</b><br>REF / <b>PERSONNEL</b><br>STATUS / <b>${statusText(c.status)}</b></div></div><div class="file-main"><div class="file-titleline"><div><div class="eyebrow">PERSONNEL DOSSIER / CLASSIFIED</div><h2>${safe(c.alias)}</h2><p class="file-subtitle">${show(c.name)} <span style="padding:0 8px">·</span> <span class="sdn-record-position sdn-position-${positionClass(c)}">${show(c.role)}</span></p><div class="sdn-file-activity">${activityBadge(c)}</div></div><div class="classification approval-stamp ${safe(c.status)}">${statusText(c.status)}<small>${c.status==='approved'?'SDN · VERIFIZIERT':c.status==='draft'?'NICHT FREIGEGEBEN':'REVIEW REQUIRED'}</small></div></div><div class="identity-grid"><div class="portrait-container ${c.photo?'':'placeholder'}">${c.photo?`<img src="${safe(live ? backend.imageUrl(c.photo) : c.photo)}" alt="Portrait ${safe(c.alias)}"/>`:`<span>${safe((c.alias||'?')[0])}</span>`}<div class="portrait-label"><span>ID ${safe(c.sdnId)}</span><span>01 / 01</span></div></div><div class="identity-fields">${facts(c)}${/^https:\/\/discord\.com\/channels\/\d+\/\d+$/.test(c.discordChannelUrl||'')?`<a class="record-discord-link" href="${safe(c.discordChannelUrl)}" target="_blank" rel="noopener noreferrer">↗ DISCORD-CHARAKTERKANAL ÖFFNEN</a>`:''}</div></div><div class="tape"></div></div>${gmMode && live && c.portrait?.preview && c.portrait.preview!==c.portrait.publishedPreview ? (()=>{const ticket=c.proposals.find(t=>t.status==='approved' && (t.isNew||t.operations.some(op=>op.kind==='portrait' && op.after?.preview===c.portrait.preview)));return ticket?`<div class="sdn-publish-warning portrait-publication">Das neue Portrait wurde genehmigt, aber noch nicht auf GitHub Pages veröffentlicht. Das bisherige bleibt aktiv. <button type="button" data-publish-portrait="${safe(ticket._dbId)}">VERÖFFENTLICHUNG ERNEUT VERSUCHEN</button></div>`:'';})():''}<nav class="paper-tabs" aria-label="Abschnitte der Personalakte" role="tablist">${tabs.map(([id,label])=>`<button class="paper-tab ${activeTab===id?'active':''} ${id==='secret'?'secret-tab':''}" type="button" role="tab" data-tab="${id}" aria-selected="${activeTab===id}">${label}</button>`).join('')}</nav><section class="tab-content" role="tabpanel">${tabContent(c)}</section><div class="file-bottom"><span>SDN RECORDS OFFICE // ${safe(c.sdnId)}</span><span>FAN CONCEPT — UNOFFICIAL</span><b>FILE / ${safe(activeTab).toUpperCase()}</b></div></article>`;
+    const publicPortrait=c.photo?(live ? backend.imageUrl(c.photo) : c.photo):'';
+    const channelLink=/^https:\/\/discord\.com\/channels\/\d+\/\d+$/.test(c.discordChannelUrl||'')
+      ? `<a class="sdn-head-link" href="${safe(c.discordChannelUrl)}" target="_blank" rel="noopener noreferrer">↗ CHARAKTERKANAL</a>` : '';
+    const publishWarning=gmMode && live && c.portrait?.preview && c.portrait.preview!==c.portrait.publishedPreview
+      ? (()=>{const ticket=c.proposals.find(t=>t.status==='approved' && (t.isNew||t.operations.some(op=>op.kind==='portrait'&&op.after?.preview===c.portrait.preview)));return ticket?`<div class="sdn-publish-warning portrait-publication">Portrait genehmigt, aber noch nicht veröffentlicht. <button type="button" data-publish-portrait="${safe(ticket._dbId)}">VERÖFFENTLICHUNG ERNEUT VERSUCHEN</button></div>`:'';})() : '';
+    $('recordBody').innerHTML=`<article class="paper-frame sdn-aktenblatt">
+      <div class="paper-mast"><div><div class="paper-wordmark">S<span>D</span>N</div><small>SUPERHERO DISPATCH NETWORK / PERSONNEL DIVISION</small></div><div class="paper-serial">PERSONALAKTE <b>${safe(c.sdnId)}</b></div></div>
+      <div class="file-main"><div class="sdn-head-layout"><div class="portrait-container ${publicPortrait?'':'placeholder'}">${publicPortrait?`<img src="${safe(publicPortrait)}" alt="Portrait von ${safe(c.alias)}" />`:`<span>${safe((c.alias||'?')[0])}</span>`}</div>
+      <div class="sdn-head-data"><div class="eyebrow">PERSONALAKTE / ${safe(c.sdnId)}</div><div class="file-titleline"><div><h2>${safe(c.alias)}</h2><div class="sdn-head-badges"><span class="sdn-record-position sdn-position-${positionClass(c)}">${show(c.role)}</span>${activityBadge(c)}</div></div><div class="classification approval-stamp ${safe(c.status)}">${statusText(c.status)}</div></div>
+        <div class="sdn-head-info"><div><small>GESCHLECHT</small><strong>${show(({male:'Männlich',female:'Weiblich',diverse:'Divers'})[c.sex]||c.sex)}</strong></div><div><small>SPIELER (DISCORD)</small><strong>${safe(ownerName(c))}</strong></div>${channelLink?`<div class="sdn-head-channel">${channelLink}</div>`:''}</div>
+      </div></div></div>${publishWarning}
+      <nav class="paper-tabs" aria-label="Abschnitte der Personalakte" role="tablist">${tabs.map(([id,label])=>`<button class="paper-tab ${activeTab===id?'active':''} ${id==='secret'?'secret-tab':''}" type="button" role="tab" data-tab="${id}" aria-selected="${activeTab===id}">${label}</button>`).join('')}</nav>
+      <section class="tab-content" role="tabpanel">${tabContent(c)}</section><div class="file-bottom"><span>SDN / ${safe(c.sdnId)}</span><span>INOFFIZIELLES DISPATCH-FANPROJEKT</span></div>
+    </article>`;
     document.querySelectorAll('[data-publish-portrait]').forEach(button=>button.addEventListener('click',async()=>{
       try{button.disabled=true;await backend.publishPortrait(button.dataset.publishPortrait);await reloadRemote();}
       catch(e){button.disabled=false;alert('GitHub-Veröffentlichung fehlgeschlagen: '+e.message);}
     }));
     document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{activeTab=b.dataset.tab;renderRecord();}));
+    $('recordBody').querySelector('[data-reveal-name]')?.addEventListener('click',()=>{revealedCivilNameFor=revealedCivilNameFor===c.uid?null:c.uid;renderRecord();});
     $('fileNoteForm')?.addEventListener('submit',async e=>{
       e.preventDefault();
       if(!isStaff())return;
@@ -217,9 +267,9 @@
       selectedId=target.uid;activeTab='identity';renderAll();
       if(matchMedia('(max-width:860px)').matches)$('recordPanel').scrollIntoView({behavior:'smooth'});
     }));
-    document.querySelectorAll('[data-remove-img]').forEach(b=>b.addEventListener('click',()=>openEdit(false,'10 / BILDER')));
-    document.querySelector('[data-add-related]')?.addEventListener('click',()=>openEdit(false,'07 / BEZIEHUNGEN',{addRelation:true}));
-    document.querySelectorAll('[data-edit-related]').forEach(b=>b.addEventListener('click',()=>openEdit(false,'07 / BEZIEHUNGEN',{targetId:b.dataset.editRelated})));
+    document.querySelectorAll('[data-remove-img]').forEach(b=>b.addEventListener('click',()=>openEdit(false,'12 / PORTRAIT')));
+    document.querySelector('[data-add-related]')?.addEventListener('click',()=>openEdit(false,'10 / BEZIEHUNGEN',{addRelation:true}));
+    document.querySelectorAll('[data-edit-related]').forEach(b=>b.addEventListener('click',()=>openEdit(false,'10 / BEZIEHUNGEN',{targetId:b.dataset.editRelated})));
     document.querySelectorAll('[data-review-change]').forEach(b=>b.addEventListener('click',async ()=>{
       if(!gmMode)return;const [id,decision]=b.dataset.reviewChange.split(':');const p=c.proposals.find(x=>x.id===id);if(!p||p.status!=='pending')return;
       if(live){
@@ -369,15 +419,33 @@
     const positions=['Superheld','Dispatcher','Teamleiter','Manager','Standortleitung','Techniker','Arzt'];
     const nameFields=['name','alias'].map(key=>formInput(key,fieldNames[key],{max:150})).join('')+selectField('role','POSITION',[['','Position auswählen'],...positions.map(x=>[x,x])])+selectField('hasSecretIdentity','GEHEIME IDENTITÄT',[['','Bitte auswählen'],['yes','Ja'],['no','Nein']])+['age','height','weight','birthplace','birthday'].map(key=>formInput(key,fieldNames[key],{max:150})).join('')+selectField('sex','GESCHLECHT',[['','Bitte auswählen'],['male','Männlich'],['female','Weiblich'],['diverse','Divers']])+formInput('discordChannelUrl',fieldNames.discordChannelUrl,{max:150});
     const appearance=['hair','eyes','build','skin','distinguishing'].map(k=>formInput(k,fieldNames[k])).join('')+['description','impression'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:2500})).join('');
+    const raceFields=selectField('raceType','RASSE',[['','Keine Daten vorhanden'],['human','Mensch'],['other','Andere']])+
+      `<div class="span2 sdn-race-details" id="raceOtherFields"><div class="form-grid">${formInput('raceName','BEZEICHNUNG DER RASSE',{max:150})}${formInput('raceOrigin','HERKUNFT DER RASSE',{area:true,wide:true,max:2500})}${formInput('raceFeatures','BESONDERHEITEN DER RASSE',{area:true,wide:true,max:3500})}</div></div>`;
+
     const classSelect=selectField('classCode','FÄHIGKEITSKLASSE',['','E','D','C','B','A','S'].map(x=>[x,x||'Keine Daten vorhanden']));
     const abilities=classSelect+['powerName','origin'].map(k=>formInput(k,fieldNames[k])).join('')+formInput('powerDescription','BESCHREIBUNG',{area:true,wide:true,max:5000})+formInput('weaknesses','SCHWÄCHEN',{area:true,wide:true,max:5000})+`<label class="span2">MOVES / ANGRIFFE / UNTERFÄHIGKEITEN (JE ZEILE „NAME | BESCHREIBUNG“)<textarea name="powersText" rows="5" maxlength="5000">${safe(editTarget.powers.map(p=>p.title+' | '+p.text).join('\n'))}</textarea></label>`+['generalWeaknesses','generalStrengths','generalAbilities'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:5000})).join('');
-    const stats=`<div class="span2"><div class="stat-form" id="statForm">${STAT_KEYS.map(([k,n])=>`<label>${n}<input name="stat_${k}" type="number" min="0.5" max="${isNew?6:10}" step="0.5" value="${editTarget.stats[k]??''}" ${gmMode?'':'required'}/></label>`).join('')}</div><div class="stat-form-total" id="statTotal"></div><span class="field-hint">${isNew?'Neue Charaktere: maximal 15 Punkte insgesamt und 6 pro Attribut.':'Änderungen: maximal 27 Punkte insgesamt und 10 pro Attribut.'} Werte in 0,5er-Schritten. ${gmMode?'SL: Felder dürfen für „Keine Daten vorhanden“ leer bleiben.':''}</span></div>`;
+    const stats=`<div class="span2"><div class="stat-form" id="statForm">${STAT_KEYS.map(([k,n])=>`<label>${n}<input name="stat_${k}" type="number" min="0.5" max="${isNew?6:10}" step="0.5" value="${editTarget.stats[k]??''}" ${gmMode?'':'required'}/></label>`).join('')}</div><div class="stat-form-total" id="statTotal"></div><span class="field-hint">${isNew?'Neue Charaktere: maximal 15 Punkte insgesamt und 6 pro Attribut.':'Änderungen: maximal 27 Punkte insgesamt und 10 pro Attribut.'} Werte in 0,5er-Schritten. ${gmMode?'SL: Felder dürfen für „Keine Daten vorhanden“ leer bleiben.':''}</span></div>`+formInput('skillNotes','ANMERKUNGEN ZUR SKILLMATRIX',{area:true,wide:true,max:5000});
     const personal=['character','motivation','behavior','assessment','likes','dislikes'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:3000})).join('');
-    const history=['background','criminalRecord','formerAffiliations'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:5000})).join('')+'<div class="span2 subeditor-heading">✚ KRANKENAKTE</div>'+['medicalConditions','medicalAllergies','medicalInjuries','medicalTreatments'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:3500})).join('');
+    const history=['background','criminalRecord','formerAffiliations'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:5000})).join('');
+    const medical=['medicalConditions','medicalAllergies','medicalInjuries','medicalTreatments'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:3500})).join('');
+    const equipment=['equipmentItems','costumeDescription'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:5000,rows:5})).join('');
     const relationsEditor='<div class="span2 relationship-editor-intro">Pro Bekanntschaft sind nur drei Angaben nötig: verknüpfter Charakter, Art der Beziehung und freier Beschreibungstext. Weitere Informationen kannst du jederzeit durch Bearbeiten des Textes ergänzen.</div><div class="span2" id="relationshipRows"></div><button class="relationship-add" id="addRelationship" type="button">＋ NEUE BEKANNTSCHAFT</button>';
     const secret=gmMode?`<label class="span2">TOP SECRET<textarea name="secretNotes" maxlength="7000" rows="7">${safe(legacySecret(editTarget))}</textarea></label>`:'';
-    $('editFields').innerHTML=section('01 / PERSONALDATEN',nameFields,true)+section('02 / ERSCHEINUNGSBILD',appearance,true)+section('03 / ATTRIBUTE',stats,true)+section('04 / FÄHIGKEITEN',abilities,false)+section('05 / PERSÖNLICHKEIT',personal,false)+section('06 / HISTORIE',history,false)+((!isNew&&editTarget.status==='approved')?section('07 / BEZIEHUNGEN',relationsEditor,false):'')+(gmMode?section('08 / TOP SECRET',secret,false):'')+section('09 / PORTRAIT',`<div class="span2 sdn-portrait-editor"><img id="portraitEditPreview" class="sdn-portrait-preview" src="${safe(editTarget.photo||'')}" alt="Aktueller Portraitausschnitt"/><div><div class="sdn-portrait-options"><input type="file" id="portraitFile" accept="image/png,image/jpeg,image/webp"/><button type="button" id="portraitPick">＋ BILD AUSWÄHLEN</button><button type="button" id="portraitRecrop" ${editTarget.portrait?.original?'':'disabled'}>✎ AUSSCHNITT BEARBEITEN</button></div><p class="sdn-portrait-note" id="portraitEditNote">Maximal 1 MB. Kein Ganzkörperbild – wähle einen gut erkennbaren Portraitausschnitt. Beachte die Bildrichtlinien des Discord-Servers.</p><div class="sdn-portrait-reference"><div class="sdn-portrait-reference-placeholder">BEISPIELPORTRAIT<br><small>MUSTERBILD FOLGT</small></div><p>Hier wird das vom RP-Team bereitgestellte Muster angezeigt.</p></div></div></div>`,true);
+    $('editFields').innerHTML=section('01 / PERSONALDATEN',nameFields,true)
+      +section('02 / RASSE',raceFields,false)
+      +section('03 / ERSCHEINUNGSBILD',appearance,false)
+      +section('04 / SKILLMATRIX',stats,false)
+      +section('05 / FÄHIGKEITEN',abilities,false)
+      +section('06 / AUSRÜSTUNG',equipment,false)
+      +section('07 / PSYCHOLOGISCHES GUTACHTEN',personal,false)
+      +section('08 / HISTORIE',history,false)
+      +section('09 / KRANKENAKTE',medical,false)
+      +((!isNew&&editTarget.status==='approved')?section('10 / BEZIEHUNGEN',relationsEditor,false):'')
+      +(gmMode?section('11 / TOP SECRET',secret,false):'')
+      +section('12 / PORTRAIT',`<div class="span2 sdn-portrait-editor"><img id="portraitEditPreview" class="sdn-portrait-preview" src="${safe(editTarget.photo||'')}" alt="Aktueller Portraitausschnitt"/><div><div class="sdn-portrait-options"><input type="file" id="portraitFile" accept="image/png,image/jpeg,image/webp"/><button type="button" id="portraitPick">＋ BILD AUSWÄHLEN</button><button type="button" id="portraitRecrop" ${editTarget.portrait?.original?'':'disabled'}>✎ AUSSCHNITT BEARBEITEN</button></div><p class="sdn-portrait-note" id="portraitEditNote">Maximal 1 MB. Kein Ganzkörperbild – wähle einen gut erkennbaren Portraitausschnitt. Beachte die Bildrichtlinien des Discord-Servers.</p><div class="sdn-portrait-reference"><div class="sdn-portrait-reference-placeholder">BEISPIELPORTRAIT<br><small>MUSTERBILD FOLGT</small></div></div></div></div>`,true);
     document.querySelectorAll('#statForm input').forEach(input=>input.addEventListener('input',updateStatTotal));
+    const updateRace=()=>{const other=$('editForm').elements.raceType?.value==='other';$('raceOtherFields').hidden=!other;};
+    $('editForm').elements.raceType?.addEventListener('change',updateRace);updateRace();
     if(!isNew&&editTarget.status==='approved'){(editTarget.relationships||[]).forEach(rel=>addRelationRow(rel));$('addRelationship').addEventListener('click',()=>addRelationRow());}
     $('portraitPick').addEventListener('click',()=>$('portraitFile').click());
     $('portraitFile').addEventListener('change',async e=>{
@@ -506,6 +574,7 @@
       seen.add(targetId);relationships.push({targetId,type,description});
     }
     if(updates.discordChannelUrl && !/^https:\/\/discord\.com\/channels\/\d+\/\d+$/.test(updates.discordChannelUrl)){$('formError').textContent='Discord-Kanallink muss https://discord.com/channels/SERVER_ID/KANAL_ID entsprechen.';return;}
+    if(updates.raceType!=='other'){updates.raceName='';updates.raceOrigin='';updates.raceFeatures='';}
     const candidate=clone(editTarget);
     for(const [key,v] of Object.entries(updates))setField(candidate,key,v);
     candidate.stats=stats;candidate.powers=powers;candidate.relationships=(editNew||editTarget.status!=='approved')?clone(editTarget.relationships||[]):relationships;

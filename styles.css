@@ -702,3 +702,113 @@ html,body{max-width:100%;overflow-x:clip}
 .sdn-report-level-a{color:#ed9c67}
 .sdn-report-level-s{color:#f28b86}
 @media(max-width:500px){.sdn-case-card>.sdn-report-level{padding:4px 6px;font-size:10px}.sdn-case-card>.sdn-case-stamp{font-size:12px;left:12px}}
+/* SDN v0.21 — Aktenblatt-Design, ausschliesslich Personalakten-Detailansicht.
+   Verzeichnisse, Einsaetze, Anmeldung, Formulare und Berechtigungen bleiben erhalten. */
+:root{--sdn-sheet:#eee5d5;--sdn-sheet-ink:#20383b;--sdn-sheet-border:#c7bca9;--sdn-sheet-muted:#68766d;--sdn-sheet-accent:#d77e43}
+.record-panel .record-topbar{margin-bottom:17px;flex-wrap:wrap}
+.sdn-aktenblatt{background:linear-gradient(110deg,rgba(255,255,255,.22),transparent 53%),repeating-linear-gradient(0deg,transparent 0 45px,rgba(82,72,46,.015) 46px),var(--sdn-sheet);color:var(--sdn-sheet-ink);border:1px solid #b4a790;clip-path:none;box-shadow:0 6px 0 #050e0e36,0 25px 65px #0006;overflow:hidden}
+.sdn-aktenblatt:before{content:"";position:absolute;top:0;left:23px;width:26px;height:11px;background:#b8a88d;border:1px solid #81715c;border-radius:2px;z-index:2}
+.sdn-aktenblatt .paper-mast{background:#e0d9c8;border-bottom:1px solid #bdb5a5;padding:14px clamp(16px,2.2vw,35px);display:flex;align-items:center;justify-content:space-between;gap:16px}
+.sdn-aktenblatt .paper-wordmark{font:900 28px/1 var(--title);transform:none;font-style:normal;letter-spacing:-1px;color:#183335}
+.sdn-aktenblatt .paper-wordmark span{color:#dc7c42}
+.sdn-aktenblatt .paper-mast small{font:700 9px/1.4 monospace;letter-spacing:1.5px;color:#60716d}
+.sdn-aktenblatt .paper-serial{color:#5c6b66;text-align:right;line-height:1.6;letter-spacing:.5px}
+.sdn-aktenblatt .file-main{padding:26px clamp(16px,2.3vw,38px) 22px}
+.sdn-head-layout{display:grid;grid-template-columns:minmax(130px,195px) minmax(0,1fr);gap:clamp(16px,2.4vw,38px);align-items:start}
+.sdn-aktenblatt .portrait-container{width:100%;min-height:0;aspect-ratio:4/5;border:7px solid #f4f0e8;background:#b1c4b8;outline:1px solid #c2bba9;box-shadow:0 4px 12px #1f252219}
+.sdn-aktenblatt .portrait-container img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center}
+.sdn-aktenblatt .portrait-container.placeholder{display:grid;place-items:center}
+.sdn-aktenblatt .portrait-container.placeholder span{font-size:52px}
+.sdn-head-data{min-width:0}
+.sdn-head-data .eyebrow{color:#8c6d58;font-size:10px;letter-spacing:1.4px}
+.sdn-aktenblatt .file-titleline{align-items:flex-start;margin:9px 0 17px;gap:15px}
+.sdn-aktenblatt .file-titleline h2{font:900 clamp(36px,4.4vw,69px)/.98 var(--title);color:#162f33;letter-spacing:-.8px;overflow-wrap:anywhere;margin:5px 0 12px}
+.sdn-head-badges{display:flex;gap:13px;align-items:center;flex-wrap:wrap}
+.sdn-head-badges .sdn-record-position{letter-spacing:.6px;font:850 12px monospace}
+.sdn-head-badges .sdn-activity-tag{margin:0}
+.sdn-aktenblatt .approval-stamp{box-shadow:none;border:3px double #578477;background:#e4ede2;color:#477968;transform:rotate(-8deg);font-size:15px;min-width:108px;white-space:nowrap;padding:10px 8px;margin:3px 5px 0}
+.sdn-aktenblatt .approval-stamp.pending,.sdn-aktenblatt .approval-stamp.draft{border-color:#a97e50;background:#f0e2cc;color:#96704e}
+.sdn-head-info{border-top:1px solid #b9b3a4;border-bottom:1px solid #c4bdae;padding:13px 0;display:flex;flex-wrap:wrap;gap:10px 25px;align-items:center}
+.sdn-head-info>div{min-width:115px;display:grid;gap:5px}
+.sdn-head-info small{font:700 9px monospace;letter-spacing:1px;color:#707c73}
+.sdn-head-info strong{font-size:12px;color:#243a3b;font-weight:750;overflow-wrap:anywhere}
+.sdn-aktenblatt a.sdn-head-link{display:inline-flex;align-items:center;color:#925f3e;border:1px solid #b8a899;background:#f1e9dc;padding:9px 12px;font:800 10px monospace;text-decoration:none}
+.sdn-aktenblatt a.sdn-head-link:hover{background:#ead7be}
+.sdn-aktenblatt .paper-tabs{padding:0 clamp(10px,2vw,28px);gap:0;background:#ded8cb;overflow-x:auto;scrollbar-width:thin;border-top:1px solid #c8bfaf;border-bottom:1px solid #c6bdac}
+.sdn-aktenblatt .paper-tab{font:800 10px/1.2 monospace;color:#52645d;letter-spacing:.2px;border-top:0;border-bottom:3px solid transparent;background:transparent;padding:14px 13px;min-height:48px}
+.sdn-aktenblatt .paper-tab:hover{background:#f1e8d8;color:#1d3d40}
+.sdn-aktenblatt .paper-tab.active{background:#f7f1e6;color:#243b3e;border-bottom-color:var(--sdn-sheet-accent)}
+.sdn-aktenblatt .paper-tab.secret-tab{color:#954d44}
+.sdn-aktenblatt .tab-content{background:#f2eadb;padding:clamp(18px,2.5vw,36px);min-height:330px}
+.sdn-aktenblatt .file-bottom{border-top:1px solid #c6bcac;margin:0 clamp(18px,2.5vw,36px);color:#6f7b73;font:700 9px monospace}
+.sdn-section-intro{margin-bottom:21px;padding-left:18px;border-left:3px solid #d17d45}
+.sdn-section-intro small{font:800 10px/1.5 monospace;color:#c3713c;letter-spacing:1px}
+.sdn-section-intro h3{font:900 clamp(28px,3vw,41px)/1.03 var(--title);color:#193539;margin:5px 0 0;text-transform:uppercase;letter-spacing:.4px}
+.sdn-doc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;align-items:start}
+.sdn-doc-column{min-width:0;display:grid;gap:16px}
+.sdn-paper-card{border:1px solid #ccc2b1;background:#f5eee2;padding:clamp(15px,1.6vw,22px);min-width:0}
+.sdn-paper-card h4{font:800 13px/1.25 monospace;letter-spacing:.65px;margin:0 0 13px;padding:0 0 12px;border-bottom:1px solid #d1c6b7;color:#273d3f}
+.sdn-paper-card .dossier-paragraph{margin:0;color:#344743;font-size:14px;line-height:1.7}
+.sdn-fact-lines .small-record{display:grid;grid-template-columns:minmax(110px,38%) minmax(0,1fr);align-items:start;gap:9px;border-bottom:1px solid #ddd2c2;padding:9px 0}
+.sdn-fact-lines .small-record:last-child{border-bottom:0}
+.sdn-fact-lines .small-record small{font:700 10px/1.6 monospace;color:#69786e;letter-spacing:.3px}
+.sdn-fact-lines .small-record strong{font:650 13px/1.55 var(--body);color:#1e3436;overflow-wrap:anywhere;white-space:normal}
+.sdn-spoiler{background:#22383c;color:#e4e9e0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;letter-spacing:2px}
+.sdn-spoiler button,.sdn-hide-name{font:800 10px monospace;border:1px solid #6a827d;color:#e9ecdf;background:#375358;padding:5px 8px;letter-spacing:0}
+.sdn-hide-name{color:#284346;background:#e3ddd0;border-color:#b5ae9f;margin-left:5px}
+.sdn-skill-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,1fr);gap:22px;align-items:start}
+.sdn-skill-radar{min-width:0;display:grid;place-items:center}
+.sdn-skill-radar .radar-wrap{width:100%;min-width:0}
+.sdn-skill-radar svg{width:100%;height:auto;max-width:480px}
+.sdn-radar-symbol{stroke:#25484a;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.sdn-skill-side{min-width:0;display:grid;gap:16px}
+.sdn-aktenblatt .stat-box{background:#f5efe3;color:#1d383a;border:1px solid #c7bfaf;padding:19px 17px}
+.sdn-aktenblatt .stat-box-header{color:#263e41;border-color:#cbbfad}
+.sdn-aktenblatt .stat-row{color:#294143;grid-template-columns:85px 1fr 44px;gap:12px;font-size:11px}
+.sdn-aktenblatt .stat-row strong{color:#20383b;font-size:13px;text-align:right}
+.sdn-aktenblatt .stat-row div{background:#ddd6c8}
+.sdn-aktenblatt .stat-row b{background:#dd8246}
+.sdn-aktenblatt .stat-foot{color:#5d716d;line-height:1.7}
+.sdn-skill-note{margin:0}
+.sdn-ability-stack{display:grid;gap:21px}
+.sdn-ability-area{padding:clamp(17px,2vw,26px);background:#ece0cb;border:1px solid #cdbca6;border-left:5px solid #cc773d}
+.sdn-general-area{background:#e5eae3;border-color:#b7c4b5;border-left-color:#618e79}
+.sdn-ability-header{border-bottom:1px solid #c9bba7;padding-bottom:13px;margin-bottom:16px}
+.sdn-ability-header small{font:700 10px monospace;color:#a45c3a;letter-spacing:1px}
+.sdn-general-area .sdn-ability-header small{color:#54816f}
+.sdn-ability-header h4{font:850 clamp(23px,2.5vw,29px) var(--title);text-transform:uppercase;color:#253c3b;margin:6px 0 0}
+.sdn-ability-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.sdn-ability-facts .small-record{min-width:0}
+.sdn-aktenblatt .dossier-section{padding:15px 17px;border:1px solid #d2c7b7;background:#f6efe4;margin:0 0 14px;min-width:0}
+.sdn-aktenblatt .dossier-section .tab-heading{font-size:12px;letter-spacing:.65px;margin:0 0 10px;color:#314b4a}
+.sdn-aktenblatt .dossier-paragraph{color:#354845;line-height:1.8;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+.sdn-aktenblatt .tab-heading{color:#284042}
+.sdn-ability-area .dossier-section{background:#f6efe4}
+.sdn-general-area .dossier-section{background:#edf3eb;border-color:#c7d1c4}
+.sdn-move-list{display:grid;gap:0}
+.sdn-move{display:grid;grid-template-columns:34px 1fr;gap:10px;border-bottom:1px solid #d5c7b4;padding:13px 0}
+.sdn-move:last-child{border-bottom:0}
+.sdn-move>span{color:#b66b3a;font:850 16px monospace}
+.sdn-move strong{display:block;font-size:14px;color:#20383b}
+.sdn-move p{margin:6px 0 0}
+.sdn-equipment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;align-items:start}
+/* Ausruestungs-Unterpunkte haben dieselbe Groesse wie alle anderen Register. */
+.sdn-equipment-grid .sdn-paper-card{padding:17px 18px}
+.sdn-equipment-grid h4{font:800 13px/1.25 monospace;letter-spacing:.65px}
+.sdn-aktenblatt .medical-file{background:#f2eddf}
+.sdn-aktenblatt .relationship-card,.sdn-aktenblatt .mission-card{box-shadow:none}
+.sdn-aktenblatt .sdn-file-notes{display:grid;gap:13px}
+.sdn-aktenblatt .sdn-file-note{background:#f5eee2;border:1px solid #cfc4b3}
+/* Editor colors: same hierarchy as dossier, no outsized equipment typography. */
+.editor-group summary{letter-spacing:.45px}
+.sdn-race-details[hidden]{display:none!important}
+.sdn-race-details .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sdn-race-details textarea{color:#eff3e9}
+@media(max-width:1040px){.sdn-skill-layout{grid-template-columns:1fr}.sdn-head-layout{grid-template-columns:155px minmax(0,1fr)}.sdn-doc-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:750px){.sdn-doc-grid,.sdn-equipment-grid,.sdn-ability-facts{grid-template-columns:1fr}.sdn-head-layout{grid-template-columns:120px minmax(0,1fr);gap:15px}.sdn-aktenblatt .approval-stamp{font-size:11px;min-width:0;padding:6px}.sdn-aktenblatt .file-titleline h2{font-size:36px}.sdn-aktenblatt .paper-tab{padding:12px 9px;font-size:9px}}
+@media(max-width:520px){.sdn-head-layout{grid-template-columns:1fr}.sdn-head-layout .portrait-container{width:min(180px,100%)}.sdn-aktenblatt .file-titleline h2{font-size:35px}.sdn-aktenblatt .file-titleline{flex-wrap:wrap}.sdn-aktenblatt .paper-mast small{font-size:8px}.sdn-aktenblatt .paper-serial{font-size:8px}.sdn-fact-lines .small-record{grid-template-columns:1fr;gap:3px}.sdn-skill-layout{grid-template-columns:1fr}.sdn-race-details .form-grid{grid-template-columns:1fr}}
+@media print{.sdn-aktenblatt{box-shadow:none;border:0;background:#fff}.sdn-aktenblatt .tab-content{background:#fff}.sdn-aktenblatt .paper-tabs{display:none}.sdn-spoiler button{display:none}}
+/* Scrollbares Register statt mehrzeiligem Reiterstapel */
+.sdn-aktenblatt .paper-tabs{flex-wrap:nowrap!important;justify-content:flex-start;scroll-behavior:smooth}
+.sdn-aktenblatt .paper-tab{flex:0 0 auto;min-width:max-content}
+.sdn-head-badges .sdn-record-position{color:var(--sdn-card-accent,#516964)}
