@@ -36,7 +36,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg>
         </button>
       </div>
-      <div class="rail-bottom" title="Mitgliederportal">v0.11<span>●</span></div>
+      <div class="rail-bottom" title="Mitgliederportal">v0.12<span>●</span></div>
     </aside>
 
     <div class="main-column">
@@ -95,9 +95,24 @@
         <p class="dialog-description">Standardisiertes Einsatzprotokoll. Neue Berichte sind zuerst <strong>zur Freigabe eingereicht</strong>. Erst nach Genehmigung erscheinen sie in den verknüpften Personalakten.</p>
         <div class="form-grid">
           <label class="span2">EINSATZBEZEICHNUNG *<input name="title" maxlength="100" required placeholder="z. B. Zwischenfall am Hafen" /></label>
-          <label class="span2">ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="open">Noch offen</option><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option></select></label><label>EINSATZBEGINN *<input name="startDate" type="date" required /></label><label>EINSATZENDE<input name="endDate" type="date" disabled /></label><label class="span2">EINSATZORT / DISCORD-CHANNEL<input name="location" maxlength="150" placeholder="Discord-Kanal, in dem das RP stattgefunden hat" /></label><label class="span2">LINK ZUM RP<input name="rpLink" type="url" maxlength="300" placeholder="https://discord.com/channels/…/…/…" /></label>
+          <label class="span2">KUNDE<input name="customer" maxlength="130" placeholder="Auftraggeber / Kunde" /></label>
+          <label class="span2">ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="open">Noch offen</option><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option></select></label><label>EINSATZBEGINN *<input name="startDate" type="date" required /></label><label>EINSATZENDE<input name="endDate" type="date" disabled /></label><label class="span2">EINSATZORT<input name="location" maxlength="150" placeholder="Ort des Einsatzes" /></label><label class="span2">LINK ZUM RP<input name="rpLink" type="url" maxlength="300" placeholder="https://discord.com/channels/…/…/…" /></label>
           <label class="span2">BETEILIGTE HELDEN *<span class="field-hint">Du kannst alle freigegebenen Helden auswählen, auch die anderer Spieler.</span><div class="participant-checks" id="participantChecks"></div></label>
-          <label>ORGANISATION<input name="organization" maxlength="130" placeholder="z. B. SDN / Organisation" /></label><label>GEGNER / SCHURKE<input name="villain" maxlength="130" placeholder="Name oder Alias" /></label>
+          <div class="sdn-customer-review span2" id="missionCustomerReview" hidden>
+            <label>KUNDENSTERNE <span class="field-hint">Nur bei abgeschlossenem Fall</span>
+              <select name="customerStars" aria-label="Kundensterne von 1 bis 5">
+                <option value="">Keine Bewertung</option>
+                <option value="1">★☆☆☆☆ – 1 Stern</option>
+                <option value="2">★★☆☆☆ – 2 Sterne</option>
+                <option value="3">★★★☆☆ – 3 Sterne</option>
+                <option value="4">★★★★☆ – 4 Sterne</option>
+                <option value="5">★★★★★ – 5 Sterne</option>
+              </select>
+            </label>
+            <label>KUNDENKOMMENTAR <span class="field-hint">Optional</span>
+              <textarea name="customerComment" rows="3" maxlength="2000" placeholder="Rückmeldung des Kunden zum abgeschlossenen Einsatz …"></textarea>
+            </label>
+          </div>
           
           <label class="span2">AUSGANGSLAGE *<textarea name="situation" rows="3" required maxlength="3000" placeholder="Was war bekannt? Wie kam es zur Alarmierung?"></textarea></label>
           <label class="span2">EINSATZVERLAUF *<textarea name="events" rows="5" required maxlength="5000" placeholder="Was ist in welcher Reihenfolge geschehen?"></textarea></label>

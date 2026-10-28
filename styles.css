@@ -528,3 +528,29 @@ html,body{max-width:100%;overflow-x:clip}
 .mission-dialog input:disabled,.mission-dialog textarea:disabled{opacity:.45;cursor:not-allowed;background:#d4d6ca;color:#778578}
 .report-rp-link{display:inline-flex;margin:18px 0;padding:10px 14px;border:1px solid #607e6d;color:#30483b;font:800 11px monospace;text-decoration:none}
 .report-rp-link:hover{border-color:#d47b3b}
+
+/* SDN v0.12 – Kundendaten und einheitliche Sternbewertung */
+.sdn-customer-review:not([hidden]){
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+  padding:14px 15px;
+  border:1px solid #b3beb1;
+  background:#e5e7db;
+}
+.sdn-customer-review[hidden]{display:none !important}
+.sdn-customer-review label{display:flex;flex-direction:column;gap:7px}
+.sdn-customer-review .field-hint{font-weight:500;letter-spacing:0;text-transform:none}
+.sdn-customer-stars{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  margin:12px 0 9px;padding:7px 11px;
+  border:1px solid rgba(239,174,93,.38);
+  background:rgba(179,115,47,.12);
+  color:#f4bc65;
+}
+.sdn-stars{font:900 20px/1.15 system-ui,sans-serif;letter-spacing:2px;white-space:nowrap}
+.sdn-stars-empty{color:#647469}
+.sdn-star-count{font:800 10px/1.4 monospace;letter-spacing:1px;color:inherit}
+.report-paper .sdn-customer-stars{color:#9e6a2c;background:#f2e5c7;border-color:#c4ae86}
+.report-paper .sdn-stars-empty{color:#b0aa9b}

@@ -62,6 +62,15 @@
 
   const ownerName = c => c.ownerDiscord || c.player || (c.ownerId === backend?.userId ? 'Du' : 'Discord-Spieler');
   const caseState = r => r.caseStatus === 'closed' || (!r.caseStatus && r.outcome !== 'open') ? 'closed' : 'open';
+  const customerRating = r => {
+    if (caseState(r)!=='closed' || r.customerStars==null || r.customerStars==='') return 0;
+    const n=Number(r.customerStars);
+    return Number.isInteger(n)&&n>=1&&n<=5?n:0;
+  };
+  const customerRatingHtml = r => {
+    const stars=customerRating(r);
+    return stars ? `<div class="sdn-customer-stars" aria-label="Kundenbewertung: ${stars} von 5 Sternen"><span class="sdn-stars" aria-hidden="true">${'★'.repeat(stars)}<span class="sdn-stars-empty">${'☆'.repeat(5-stars)}</span></span><span class="sdn-star-count">${stars}/5 KUNDENSTERNE</span></div>` : '';
+  };
   const reportParticipants = r => (r.participants || []).map(id=>characters.find(c=>c.uid===id)).filter(Boolean);
   const hasNewRequest = c => (c.proposals || []).some(t=>t.status==='pending' && t.isNew);
   const hasChangeRequest = c => (c.proposals || []).some(t=>t.status==='pending' && !t.isNew);
@@ -120,7 +129,7 @@
     const heroes=reportParticipants(r);
     const closed=caseState(r)==='closed';
     const badge=cardApproval(r.status==='pending',r.status==='approved',r.submittedByMe,r.status==='rejected');
-    return `<button type="button" class="mission-card sdn-case-card sdn-case-clickable" data-open-report="${safe(r.id)}" aria-label="Einsatzprotokoll ${safe(r.title)} öffnen"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><div class="mission-card-top"><span class="file-code">${safe(r.id)}</span></div><h3>${safe(r.title)}</h3><div class="mission-card-meta">${safe(r.date)} · ${safe(r.location||'Ohne Ortsangabe')}</div><p class="sdn-case-heroes">HELDEN: ${heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten'}</p>${r.organization?`<p class="sdn-case-extra">ORGANISATION: ${safe(r.organization)}</p>`:''}${r.villain?`<p class="sdn-case-extra">GEGNER: ${safe(r.villain)}</p>`:''}${compact?'':`<p class="sdn-case-summary">${safe(r.situation)}</p>`}<div class="sdn-card-approval">${badge}</div></button>`;
+    return `<button type="button" class="mission-card sdn-case-card sdn-case-clickable" data-open-report="${safe(r.id)}" aria-label="Einsatzprotokoll ${safe(r.title)} öffnen"><div class="sdn-case-stamp ${closed?'is-closed':'is-open'}">${closed?'ABGESCHLOSSEN':'FALL OFFEN'}</div><div class="mission-card-top"><span class="file-code">${safe(r.id)}</span></div><h3>${safe(r.title)}</h3><div class="mission-card-meta">${safe(r.date||r.startDate)} · ${safe(r.location||'Ohne Ortsangabe')}</div>${r.customer?`<p class="sdn-case-extra">KUNDE: ${safe(r.customer)}</p>`:''}<p class="sdn-case-heroes">HELDEN: ${heroes.length?heroes.map(c=>safe(c.alias)).join(' · '):'Keine zugewiesenen Akten'}</p>${customerRatingHtml(r)}${compact?'':`<p class="sdn-case-summary">${safe(r.situation)}</p>`}<div class="sdn-card-approval">${badge}</div></button>`;
   }
   function tabContent(c){
     switch(activeTab){
@@ -228,14 +237,14 @@
         const mine=r.submittedByMe||heroes.some(c=>c.ownerId===backend?.userId);
         const scope=missionOwnership==='mine'?mine:missionOwnership==='pending'?gmMode&&r.status==='pending':true;
         const state=missionCase==='all'||caseState(r)===missionCase;
-        const searchText=[r.title,r.id,r.organization,r.villain,r.location,r.submitted,...heroes.flatMap(c=>[c.alias,c.name,c.ownerDiscord,c.ownerDiscordUsername])].join(' ').toLocaleLowerCase('de');
+        const searchText=[r.title,r.id,r.customer,r.location,r.submitted,...heroes.flatMap(c=>[c.alias,c.name,c.ownerDiscord,c.ownerDiscordUsername])].join(' ').toLocaleLowerCase('de');
         return scope&&state&&searchText.includes(q);
       }).sort((a,b)=>{
         const order=Number(new Date(b.createdAt||b.date||0))-Number(new Date(a.createdAt||a.date||0));
         return (missionSort==='new'?order:-order)||String(a.id).localeCompare(String(b.id));
       });
       const missionOptions=[['all','Alle Einsätze'],['mine','Meine Einsätze'],...(gmMode?[['pending','Offene Berichtsfreigaben (SL)']]:[])];
-      root.innerHTML=`<div class="mission-dashboard"><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Held, Discord, Schurke, Organisation ..." value="${safe(missionSearch)}" autocomplete="off"></label><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results"><span>${visible.length} EINSATZAKTEN</span><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="missions-catalog" id="missionCards" tabindex="0" aria-label="Scrollbares Einsatzarchiv">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div>`;
+      root.innerHTML=`<div class="mission-dashboard"><div class="sdn-directory-filters sdn-report-filters"><label class="sdn-search-label">SUCHE<input type="search" id="missionSearch" placeholder="Einsatz, Kunde, Held, Discord ..." value="${safe(missionSearch)}" autocomplete="off"></label><label>ANZEIGE<select id="missionOwnership">${missionOptions.map(([v,l])=>`<option value="${v}" ${missionOwnership===v?'selected':''}>${l}</option>`).join('')}</select></label><label>FALLSTATUS<select id="missionCase"><option value="all" ${missionCase==='all'?'selected':''}>Alle Fälle</option><option value="open" ${missionCase==='open'?'selected':''}>Offen</option><option value="closed" ${missionCase==='closed'?'selected':''}>Abgeschlossen</option></select></label><label>SORTIEREN<select id="missionSort"><option value="new" ${missionSort==='new'?'selected':''}>Neueste zuerst</option><option value="old" ${missionSort==='old'?'selected':''}>Älteste zuerst</option></select></label></div><div class="sdn-directory-results"><span>${visible.length} EINSATZAKTEN</span><button class="operation-add" type="button" id="newMission">＋ EINSATZPROTOKOLL ERSTELLEN</button></div><div class="missions-catalog" id="missionCards" tabindex="0" aria-label="Scrollbares Einsatzarchiv">${visible.length?visible.map(r=>missionCard(r)).join(''):'<div class="mission-empty">Keine Einsatzberichte mit diesen Filtern.</div>'}</div></div>`;
       $('newMission').addEventListener('click',openMissionDialog);
       $('missionSearch').addEventListener('input',e=>{missionSearch=e.target.value;missionScroll=0;const caret=e.target.selectionStart;renderMissions();const next=$('missionSearch');next.focus();next.setSelectionRange(caret,caret);});
       $('missionOwnership').addEventListener('change',e=>{missionOwnership=e.target.value;missionScroll=0;renderMissions();});
@@ -256,7 +265,7 @@
   }
   function reportDetail(r){
     const participants=r.participants.map(id=>characters.find(c=>c.uid===id)).filter(Boolean);
-    return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><div class="sdn-report-detail-stamps"><div class="classification approval-stamp ${r.status==='approved'?'approved':'pending'}">${r.status==='approved'?'APPROVED':r.status==='pending'?'PENDING':'REJECTED'}<small>${r.status==='approved'?'SDN · VERIFIZIERT':r.status==='pending'?'REVIEW REQUIRED':'NICHT FREIGEGEBEN'}</small></div><div class="sdn-case-stamp ${caseState(r)==='closed'?'is-closed':'is-open'}">${caseState(r)==='closed'?'ABGESCHLOSSEN':'FALL OFFEN'}</div></div></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZBEGINN',r.startDate||r.date],['EINSATZENDE',r.endDate||'Keine Daten vorhanden'],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]],['ORGANISATION',r.organization||'—'],['GEGNER / SCHURKE',r.villain||'—']].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${r.damageStatus==='yes'?subsection('SCHADENSBERICHT',r.damages):''}${subsection('04 / ZUSATZVERMERKE',r.notes)}${r.rpLink&&/^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d+\/\d+\/\d+$/.test(r.rpLink)?`<a class="report-rp-link" href="${safe(r.rpLink)}" target="_blank" rel="noopener noreferrer">↗ ZUM DISCORD-RP</a>`:''}${r.requestComment?subsection('ANMERKUNG ZUM ANTRAG',r.requestComment):''}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${gmMode&&r.status==='pending'?`<div class="review-box"><strong>SPIELLEITUNG / FREIGABE</strong><p>Die Verknüpfung zur Personalakte wird erst bei Freigabe sichtbar.</p><div class="action-pair"><button data-review-report="${safe(r.id)}:approve" type="button">✓ BERICHT FREIGEBEN</button><button data-review-report="${safe(r.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}<div class="source-note">Einsatzberichte werden nach Freigabe mit den beteiligten Akten verknüpft.</div></div></article>`;
+    return `<article class="report-paper"><div class="report-paper-bar"><span>SUPERHERO DISPATCH NETWORK // OPERATIONS</span><b>${safe(r.id)}</b></div><div class="report-paper-inner"><div class="report-main-heading"><div><span class="eyebrow">EINSATZBERICHT / FIELD REPORT</span><h2>${safe(r.title)}</h2></div><div class="sdn-report-detail-stamps"><div class="classification approval-stamp ${r.status==='approved'?'approved':'pending'}">${r.status==='approved'?'APPROVED':r.status==='pending'?'PENDING':'REJECTED'}<small>${r.status==='approved'?'SDN · VERIFIZIERT':r.status==='pending'?'REVIEW REQUIRED':'NICHT FREIGEGEBEN'}</small></div><div class="sdn-case-stamp ${caseState(r)==='closed'?'is-closed':'is-open'}">${caseState(r)==='closed'?'ABGESCHLOSSEN':'FALL OFFEN'}</div></div></div><div class="report-meta-grid">${[['AKTENNUMMER',r.id],['EINSATZBEGINN',r.startDate||r.date],['EINSATZENDE',r.endDate||'Keine Daten vorhanden'],['EINSATZORT',r.location||'Unbekannt'],['ERGEBNIS',OUTCOMES[r.outcome]],['KUNDE',r.customer||'Keine Daten vorhanden']].map(([l,v])=>recordPair(l,v)).join('')}</div><div class="tab-heading spaced-heading">EINGESETZTES PERSONAL</div><div class="person-pills">${participants.map(c=>`<button class="person-pill" data-open-character="${safe(c.uid)}" type="button">${safe(c.alias)} <span>SDN #${safe(c.sdnId)} ↗</span></button>`).join('')}</div>${subsection('01 / AUSGANGSLAGE',r.situation)}${subsection('02 / EINSATZVERLAUF',r.events)}<div class="tab-heading">03 / ZIVILE INFRASTRUKTUR</div><p class="report-emphasis">${safe(DAMAGE[r.damageStatus]||'Unbekannt')}</p>${r.damageStatus==='yes'?subsection('SCHADENSBERICHT',r.damages):''}${subsection('04 / ZUSATZVERMERKE',r.notes)}${customerRatingHtml(r)}${caseState(r)==='closed'&&r.customerComment?subsection('KUNDENKOMMENTAR',r.customerComment):''}${r.rpLink&&/^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d+\/\d+\/\d+$/.test(r.rpLink)?`<a class="report-rp-link" href="${safe(r.rpLink)}" target="_blank" rel="noopener noreferrer">↗ ZUM DISCORD-RP</a>`:''}${r.requestComment?subsection('ANMERKUNG ZUM ANTRAG',r.requestComment):''}<div class="report-conclusion">ABSCHLUSSVERMERK <strong>${safe(OUTCOMES[r.outcome]||'UNBEKANNT')}</strong></div><div class="report-signatures"><span>EINGEREICHT VON<br><strong>${safe(r.submitted)}</strong></span><span>FREIGABE<br><strong>${r.status==='approved'?safe(r.reviewed||'Spielleitung'):'NOCH NICHT FREIGEGEBEN'}</strong></span></div>${gmMode&&r.status==='pending'?`<div class="review-box"><strong>SPIELLEITUNG / FREIGABE</strong><p>Die Verknüpfung zur Personalakte wird erst bei Freigabe sichtbar.</p><div class="action-pair"><button data-review-report="${safe(r.id)}:approve" type="button">✓ BERICHT FREIGEBEN</button><button data-review-report="${safe(r.id)}:reject" type="button">× ABLEHNEN</button></div></div>`:''}<div class="source-note">Einsatzberichte werden nach Freigabe mit den beteiligten Akten verknüpft.</div></div></article>`;
   }
   function navigate(to){
     view=to;
@@ -462,7 +471,15 @@
     const f=$('missionForm');f.reset();
     f.elements.outcome.value='open';
     f.elements.startDate.value=new Date().toISOString().slice(0,10);
-    const updateOutcome=()=>{const done=f.elements.outcome.value!=='open';f.elements.endDate.disabled=!done;f.elements.endDate.required=done;if(!done)f.elements.endDate.value='';};
+    const updateOutcome=()=>{
+      const done=f.elements.outcome.value!=='open';
+      f.elements.endDate.disabled=!done;
+      f.elements.endDate.required=done;
+      $('missionCustomerReview').hidden=!done;
+      f.elements.customerStars.disabled=!done;
+      f.elements.customerComment.disabled=!done;
+      if(!done){f.elements.endDate.value='';f.elements.customerStars.value='';f.elements.customerComment.value='';}
+    };
     const updateDamage=()=>{const has=f.elements.damageStatus.value==='yes';f.elements.damages.disabled=!has;if(!has)f.elements.damages.value='';};
     f.elements.outcome.addEventListener('change',updateOutcome,{once:false});f.elements.damageStatus.addEventListener('change',updateDamage,{once:false});updateOutcome();updateDamage();
     $('participantChecks').innerHTML=characters.filter(c=>!live||c.status==='approved').map(c=>`<label class="participant-option"><input type="checkbox" name="participant" value="${safe(c.uid)}"><span>${safe(c.alias)} <small>#${safe(c.sdnId)}</small></span></label>`).join('');
@@ -470,13 +487,14 @@
   }
   function saveMission(evt){
     evt.preventDefault();const f=$('missionForm');$('missionError').textContent='';const data={};
-    for(const key of ['title','startDate','endDate','location','rpLink','organization','villain','situation','events','outcome','damageStatus','damages','notes'])data[key]=f.elements[key].value.trim();
+    for(const key of ['title','customer','startDate','endDate','location','rpLink','customerStars','customerComment','situation','events','outcome','damageStatus','damages','notes'])data[key]=f.elements[key].value.trim();
     data.date=data.startDate;
     data.caseStatus=data.outcome==='open'?'open':'closed';
-    if(data.outcome==='open')data.endDate='';
+    if(data.outcome==='open'){data.endDate='';data.customerStars='';data.customerComment='';}
     if(data.damageStatus!=='yes')data.damages='';
     if(data.caseStatus==='closed'&&!data.endDate){$('missionError').textContent='Bitte das Einsatzende für abgeschlossene Einsätze angeben.';return;}
     if(data.endDate && data.endDate < data.startDate){$('missionError').textContent='Das Einsatzende darf nicht vor dem Einsatzbeginn liegen.';return;}
+    if(data.customerStars&&!/^[1-5]$/.test(data.customerStars)){$('missionError').textContent='Bitte eine Kundenbewertung von 1 bis 5 Sternen auswählen.';return;}
     if(data.rpLink&&!/^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d+\/\d+\/\d+$/.test(data.rpLink)){$('missionError').textContent='Bitte einen Discord-Link zur ersten RP-Nachricht eintragen.';return;}
     data.requestComment=$('missionComment').value.trim();
     const participants=[...$('participantChecks').querySelectorAll('input:checked')].map(el=>el.value);
