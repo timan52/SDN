@@ -1011,3 +1011,111 @@ html,body{max-width:100%;overflow-x:clip}
 @media (max-width: 520px) {
   .sdn-aktenblatt .sdn-head-info .sdn-head-channel { margin-left: auto; }
 }
+
+/* SDN v0.24 — einheitliche Spoilerzeile, Fallkachel-Stempel und Levelbilanz */
+.sdn-aktenblatt .sdn-fact-lines .small-record:has(.sdn-name-spoiler) {
+  align-items: center;
+}
+.sdn-name-spoiler {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 5px 6px 5px 12px;
+  background: #263b3e;
+  border: 1px solid #5d7773;
+  color: #f5efe2;
+  letter-spacing: 0;
+}
+.sdn-aktenblatt .sdn-fact-lines .sdn-name-spoiler .sdn-name-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #f5efe2;
+  font: 650 13px/1.4 var(--body);
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+.sdn-name-spoiler.is-concealed .sdn-name-text { letter-spacing: .18em; }
+.sdn-name-spoiler button {
+  flex: 0 0 96px;
+  min-height: 30px;
+  margin: 0;
+  border: 1px solid #718e88;
+  background: #385358;
+  color: #f2f0e4;
+  font: 800 10px/1.2 monospace;
+  padding: 7px 8px;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.sdn-name-spoiler button:hover,
+.sdn-name-spoiler button:focus-visible { border-color: #e29a58; background: #49636a; }
+@media (max-width:520px) {
+  .sdn-name-spoiler { width: 100%; }
+  .sdn-name-spoiler button { flex-basis: 88px; }
+}
+/* Fallstatus direkt rechts neben dem Level, ohne schrägen Stempel */
+.sdn-case-card,
+.mission-cards.embedded .sdn-case-card { padding-top: 18px !important; }
+.sdn-case-card .sdn-case-classifications {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 3px 0 13px;
+  flex: 0 0 auto;
+}
+.sdn-case-card .sdn-case-classifications .sdn-report-level,
+.sdn-case-card .sdn-case-classifications .sdn-case-stamp {
+  position: static;
+  transform: none;
+  margin: 0;
+  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 850 11px/1.1 monospace;
+  letter-spacing: .08em;
+  padding: 5px 9px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.sdn-case-card .sdn-case-classifications .sdn-case-stamp.is-open { color: #e9a56f; background: #3d342e; }
+.sdn-case-card .sdn-case-classifications .sdn-case-stamp.is-closed { color: #a4d8b6; background: #253e35; }
+/* Kennzahlen im Einsatzreiter jeder freigegebenen Personalakte. Null ist sichtbar. */
+.sdn-mission-level-summary {
+  margin-bottom: 25px;
+  padding: 18px 20px;
+  background: #f5eee2;
+  border: 1px solid #cbbfae;
+}
+.sdn-mission-level-summary .tab-heading { color: #294144; margin-bottom: 12px; }
+.sdn-mission-level-grid { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 9px; }
+.sdn-mission-level-count {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 13px 6px;
+  background: #ede4d7;
+  border: 1px solid #c9baaa;
+  border-top: 3px solid var(--level-color,#7d958c);
+  color: #253c3e;
+}
+.sdn-mission-level-count span { font: 850 10px/1.2 monospace; letter-spacing: .06em; }
+.sdn-mission-level-count strong { font: 900 28px/1 var(--title); color: #253c3e; font-variant-numeric: tabular-nums; }
+.sdn-level-count-e { --level-color: #65997f; }
+.sdn-level-count-d { --level-color: #619ab5; }
+.sdn-level-count-c { --level-color: #938ad1; }
+.sdn-level-count-b { --level-color: #b99135; }
+.sdn-level-count-a { --level-color: #d0773f; }
+.sdn-level-count-s { --level-color: #be6363; }
+@media (max-width:900px) { .sdn-mission-level-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:420px) { .sdn-mission-level-summary { padding:13px; } .sdn-mission-level-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
