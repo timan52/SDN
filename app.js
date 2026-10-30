@@ -13,7 +13,7 @@
   const positionName = c => String(c?.role||'').trim();
   const positionClass = c => POSITION_CLASS[positionName(c)] || 'unbekannt';
   const TABS = [['identity','01 IDENTITÄT'],['attributes','02 SKILLMATRIX'],['abilities','03 FÄHIGKEITEN'],['equipment','04 AUSRÜSTUNG'],['personality','05 CHARAKTER'],['history','06 HISTORIE'],['medical','07 MEDIZINISCHE AKTE'],['relationships','08 BEZIEHUNGEN'],['missions','09 EINSÄTZE'],['file-notes','10 AKTENNOTIZ'],['secret','11 TOP SECRET']];
-  const OUTCOMES = {success:'ERFOLGREICH ABGESCHLOSSEN', partial:'TEILWEISE ERFOLGREICH',failure:'NICHT ERFOLGREICH',open:'NOCH OFFEN'};
+  const OUTCOMES = {closed:'ABGESCHLOSSEN',success:'ABGESCHLOSSEN', partial:'ABGESCHLOSSEN',failure:'ABGESCHLOSSEN',open:'NOCH OFFEN'};
   const REPORT_LEVELS = ['E','D','C','B','A','S'];
   const reportLevelText = value => REPORT_LEVELS.includes(String(value||'').toUpperCase()) ? 'LEVEL '+String(value).toUpperCase() : 'NICHT EINGESTUFT';
   const reportLevelBadge = r => REPORT_LEVELS.includes(String(r.level||'').toUpperCase()) ? `<span class="sdn-report-level sdn-report-level-${safe(String(r.level).toLowerCase())}">${safe(reportLevelText(r.level))}</span>` : '';
@@ -42,6 +42,7 @@
   const picked = () => characters.find(c=>c.uid===selectedId) || characters[0];
   const total = c => STAT_KEYS.reduce((v,[k])=>v+Number(c?.stats?.[k]||0),0);
   const stamp = () => new Date().toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'});
+  const berlinDate = () => new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const editableKeys = ['name','alias','role','hasSecretIdentity','height','weight','age','sex','birthplace','birthday','classCode','raceType','raceName','raceOrigin','raceFeatures','skillNotes','equipmentItems','costumeDescription','hair','eyes','build','skin','distinguishing','description','impression','character','motivation','behavior','assessment','likes','dislikes','background','criminalRecord','formerAffiliations','medicalConditions','medicalInjuries','medicalTreatments','medicalAllergies','powerName','origin','powerDescription','weaknesses','generalWeaknesses','generalStrengths','generalAbilities'];
   const secretEditKeys = ['notes'];
   const fieldNames = {name:'Name',alias:'Alias',role:'Position',hasSecretIdentity:'Geheime Identität',height:'Größe',weight:'Gewicht',age:'Alter',sex:'Geschlecht',birthplace:'Geburtsort',birthday:'Geburtstag',discordChannelUrl:'Discord-Charakterkanal (URL)',classCode:'Fähigkeitsklasse',raceType:'Rasse',raceName:'Bezeichnung der Rasse',raceOrigin:'Herkunft der Rasse',raceFeatures:'Besonderheiten der Rasse',skillNotes:'Anmerkungen zur Skillmatrix',equipmentItems:'Ausstattung',costumeDescription:'Superheldenkostüm',hair:'Haarfarbe',eyes:'Augenfarbe',build:'Statur',skin:'Teint',distinguishing:'Besondere Merkmale',description:'Beschreibung des Aussehens',impression:'Besonderheiten',character:'Persönlichkeit',motivation:'Motivation',behavior:'Sozialverhalten',assessment:'Psychologisches Gutachten',likes:'Likes',dislikes:'Dislikes',background:'Hintergrundgeschichte',criminalRecord:'Strafregister',formerAffiliations:'Ehemalige Zugehörigkeiten',medicalConditions:'Vorerkrankungen / Dauerhafte Beschwerden',medicalInjuries:'Verletzungen / Medizinische Vorfälle',medicalTreatments:'Behandlungen / Operationen',medicalAllergies:'Allergien / Medizinische Einschränkungen',powerName:'Fähigkeitsname',origin:'Ursprung',powerDescription:'Beschreibung',weaknesses:'Schwächen',generalWeaknesses:'Allgemeine Schwächen',generalStrengths:'Allgemeine Stärken',generalAbilities:'Sonstige allgemeine Fähigkeiten',notes:'TOP SECRET'};
@@ -316,7 +317,7 @@
     // In the detail state the archive is not mounted at all. Reviews happen here only.
     if(view==='mission-detail'){
       const report=reportFocus&&currentMission(reportFocus);
-      root.innerHTML=`<div class="sdn-detail-topbar"><button type="button" class="sdn-return-button" id="backMissions">← ZUR EINSATZÜBERSICHT</button><div class="record-top-actions">${report?`${gmMode||(dispatcherMode&&report.submittedByMe)||!live?`<button type="button" class="text-button" id="reportChangesButton">ÄNDERUNGEN ${(report.edits||[]).filter(e=>e.status==='pending').length?`<b class="pending-counter">${(report.edits||[]).filter(e=>e.status==='pending').length}</b>`:''} <span>↗</span></button>`:''}<button type="button" class="text-button" id="printReportButton">DRUCKEN <span>↗</span></button>${gmMode&&report.status==='pending'?`<button type="button" class="outline-button" data-review-report="${safe(report.id)}:approve">BERICHT FREIGEBEN ✓</button><button type="button" class="outline-button" data-review-report="${safe(report.id)}:reject">ABLEHNEN</button>`:''}${gmMode&&report.status==='approved'?`<button type="button" class="outline-button" id="syncOperationForum">↗ DISCORD-NOTRUF SYNCHRONISIEREN</button>`:''}${gmMode?`<button type="button" class="outline-button sdn-danger-button" data-delete-report="${safe(report.id)}">EINSATZPROTOKOLL LÖSCHEN</button>`:''}${gmMode||(dispatcherMode&&report.submittedByMe)||!live?`<button type="button" class="outline-button" id="editReportButton">✎ DATEN BEARBEITEN</button>`:''}`:''}</div></div><div class="mission-detail">${report?reportDetail(report):'<div class="detail-empty"><h3>EINSATZAKTE NICHT GEFUNDEN</h3><p>Bitte zurück zum Einsatzarchiv wechseln.</p></div>'}</div>`;
+      root.innerHTML=`<div class="sdn-detail-topbar"><button type="button" class="sdn-return-button" id="backMissions">← ZUR EINSATZÜBERSICHT</button><div class="record-top-actions">${report?`${gmMode||(dispatcherMode&&report.submittedByMe)||!live?`<button type="button" class="text-button" id="reportChangesButton">ÄNDERUNGEN ${(report.edits||[]).filter(e=>e.status==='pending').length?`<b class="pending-counter">${(report.edits||[]).filter(e=>e.status==='pending').length}</b>`:''} <span>↗</span></button>`:''}<button type="button" class="text-button" id="printReportButton">DRUCKEN <span>↗</span></button>${gmMode&&report.status==='pending'?`<button type="button" class="outline-button" data-review-report="${safe(report.id)}:approve">BERICHT FREIGEBEN ✓</button><button type="button" class="outline-button" data-review-report="${safe(report.id)}:reject">ABLEHNEN</button>`:''}${gmMode&&report.status==='approved'?`<button type="button" class="outline-button" id="syncOperationForum">↗ DISCORD-NOTRUF SYNCHRONISIEREN</button>`:''}${gmMode?`<button type="button" class="outline-button sdn-danger-button" data-delete-report="${safe(report.id)}">EINSATZPROTOKOLL LÖSCHEN</button>`:''}${report.status==='approved'&&(gmMode||(dispatcherMode&&report.submittedByMe)||!live)?`<button type="button" class="outline-button" id="editReportButton">✎ DATEN BEARBEITEN</button>`:''}`:''}</div></div><div class="mission-detail">${report?reportDetail(report):'<div class="detail-empty"><h3>EINSATZAKTE NICHT GEFUNDEN</h3><p>Bitte zurück zum Einsatzarchiv wechseln.</p></div>'}</div>`;
       $('editReportButton')?.addEventListener('click',()=>openMissionDialog(report));
       $('syncOperationForum')?.addEventListener('click',async()=>{try{await backend.syncOperationForum(report._dbId);await reloadRemote();}catch(e){alert('Discord-Synchronisierung fehlgeschlagen: '+e.message);}});
       $('printReportButton')?.addEventListener('click',()=>window.print());
@@ -627,78 +628,127 @@
     activeTab='audit';$('editDialog').close();navigate('personnel');
   }
 
-    function openMissionDialog(report=null){
+  function openMissionDialog(report=null){
+    if(report && report.status!=='approved'){alert('Erst nach der Freigabe des Notrufs kann der Einsatz bearbeitet werden.');return;}
     if(live && !gmMode && !(dispatcherMode && (!report || report.submittedByMe))) { alert('Nur Dispatcher oder die SL dürfen Einsätze anlegen bzw. eigene Einsätze bearbeiten.'); return; }
     reportEditTarget=report;
+    const creating=!report;
     const f=$('missionForm');f.reset();
-    $('missionDialogTitle').textContent=report?'EINSATZPROTOKOLL BEARBEITEN':'EINSATZPROTOKOLL EINREICHEN';
-    $('missionDialogDescription').innerHTML=report?'Änderungen an einem bestehenden Einsatzprotokoll werden als Antrag zur Freigabe eingereicht. Bis dahin bleibt der bisherige Bericht unverändert.':'Der genehmigte offene Einsatz erscheint als Notruf im Discord-Forum. Freiwillige Teilnehmer melden sich dort; der Dispatcher trägt sie später in diesen Bericht ein. Die Spielleitung muss jede Änderung freigeben.';
+    $('missionDialogTitle').textContent=creating?'NOTRUF ERSTELLEN':'EINSATZPROTOKOLL BEARBEITEN';
+    $('missionDialogDescription').textContent=creating
+      ?'Nach Freigabe durch die Spielleitung wird der offene Einsatz als Notruf im Discord-Forum veröffentlicht. Teilnehmer, RP-Link und Einsatzverlauf werden später ergänzt.'
+      :'Änderungen an einem bestehenden Einsatzprotokoll werden als Antrag zur Freigabe eingereicht. Bis dahin bleibt der bisherige Bericht unverändert.';
+    $('missionInitialStatus').hidden=!creating;
+    document.querySelectorAll('#missionDialog [data-mission-edit-only]').forEach(el=>{el.hidden=creating;});
     f.elements.outcome.value='open';
-    f.elements.startDate.value=new Date().toISOString().slice(0,10);
+    f.elements.startDate.value=berlinDate();
+    f.elements.startDate.readOnly=true;
+    f.elements.endDate.readOnly=true;
+    f.elements.dispatcherId.required=true;
     const updateOutcome=()=>{
-      const done=f.elements.outcome.value!=='open';
+      const done=!creating && f.elements.outcome.value==='closed';
       f.elements.endDate.disabled=!done;
-      f.elements.endDate.required=done;
-      $('missionCustomerReview').hidden=false;
+      f.elements.endDate.required=false;
+      if(done && !f.elements.endDate.value)f.elements.endDate.value=berlinDate();
+      if(!done){f.elements.endDate.value='';f.elements.customerStars.value='';f.elements.customerComment.value='';}
+      $('missionCustomerReview').hidden=creating;
       $('missionCustomerReview').classList.toggle('is-disabled',!done);
       $('customerReviewHint').textContent=done?'OPTIONAL · Bei abgeschlossenen Einsätzen':'ERST BEI ABGESCHLOSSENEM FALL VERFÜGBAR';
       f.elements.customerStars.disabled=!done;
       f.elements.customerComment.disabled=!done;
-      $('customerStarPreview').textContent=done&&f.elements.customerStars.value ? `${'★'.repeat(Number(f.elements.customerStars.value))}${'☆'.repeat(5-Number(f.elements.customerStars.value))}` : '☆☆☆☆☆';
-      if(!done){f.elements.endDate.value='';f.elements.customerStars.value='';f.elements.customerComment.value='';}
+      $('customerStarPreview').textContent=done&&f.elements.customerStars.value
+        ?`${'★'.repeat(Number(f.elements.customerStars.value))}${'☆'.repeat(5-Number(f.elements.customerStars.value))}`:'☆☆☆☆☆';
+      f.elements.events.required=done;
     };
-    const updateDamage=()=>{const has=f.elements.damageStatus.value==='yes';f.elements.damages.disabled=!has;if(!has)f.elements.damages.value='';};
-    f.elements.outcome.onchange=updateOutcome;f.elements.damageStatus.onchange=updateDamage;
-    f.elements.customerStars.onchange=updateOutcome;updateOutcome();updateDamage();
-    f.elements.dispatcherId.required=true;
-    f.elements.events.required=f.elements.outcome.value!=='open';
-    f.elements.outcome.addEventListener('change',()=>{f.elements.events.required=f.elements.outcome.value!=='open';},{once:false});
-    $('participantChecks').querySelectorAll('input[name="participant"]').forEach(x=>x.required=false);
-    $('missionDispatcher').innerHTML='<option value="">Dispatcher auswählen</option>'+ characters.filter(c=>c.status==='approved'&&c.role==='Dispatcher').map(c=>`<option value="${safe(c.uid)}">${safe(c.alias)} · SDN #${safe(c.sdnId)}</option>`).join('');
-    $('participantChecks').innerHTML=characters.filter(c=>!live||c.status==='approved').map(c=>`<label class="participant-option"><input type="checkbox" name="participant" value="${safe(c.uid)}"><span>${safe(c.alias)} <small>#${safe(c.sdnId)}</small></span></label>`).join('');
+    const updateDamage=()=>{const has=!creating&&f.elements.damageStatus.value==='yes';f.elements.damages.disabled=!has;if(!has)f.elements.damages.value='';};
+    f.elements.outcome.onchange=updateOutcome;
+    f.elements.damageStatus.onchange=updateDamage;
+    f.elements.customerStars.onchange=updateOutcome;
+    $('missionDispatcher').innerHTML='<option value="">Dispatcher auswählen</option>'+characters
+      .filter(c=>c.status==='approved'&&String(c.role||'').trim().toLowerCase()==='dispatcher')
+      .map(c=>`<option value="${safe(c.uid)}">${safe(c.alias)} · SDN #${safe(c.sdnId)}</option>`).join('');
+    $('participantChecks').innerHTML=characters.filter(c=>!live||c.status==='approved')
+      .map(c=>`<label class="participant-option"><input type="checkbox" name="participant" value="${safe(c.uid)}"><span>${safe(c.alias)} <small>#${safe(c.sdnId)}</small></span></label>`).join('');
     if(report){
-      for(const key of ['title','level','customer','outcome','startDate','endDate','location','rpLink','situation','events','damageStatus','damages','notes','customerStars','customerComment','dispatcherId']){
+      for(const key of ['title','level','customer','startDate','endDate','location','rpLink','situation','events','damageStatus','damages','notes','customerStars','customerComment','dispatcherId']){
         if(f.elements[key])f.elements[key].value=report[key]??(key==='startDate'?report.date||'':'');
       }
+      f.elements.outcome.value=report.outcome==='open'?'open':'closed';
       $('participantChecks').querySelectorAll('input[name="participant"]').forEach(ch=>ch.checked=(report.participants||[]).includes(ch.value));
-      $('missionComment').value='';updateOutcome();updateDamage();
+      // A closed report cannot be reopened after its Discord completion notification.
+      f.elements.outcome.querySelector('option[value="open"]').disabled=f.elements.outcome.value==='closed';
+    }else{
+      f.elements.outcome.querySelector('option[value="open"]').disabled=false;
     }
+    $('missionComment').value='';updateOutcome();updateDamage();
     $('missionError').textContent='';$('missionDialog').showModal();
   }
+
   function saveMission(evt){
-    evt.preventDefault();const f=$('missionForm');$('missionError').textContent='';const data={};
-    for(const key of ['title','level','customer','startDate','endDate','location','rpLink','customerStars','customerComment','situation','events','outcome','damageStatus','damages','notes'])data[key]=f.elements[key].value.trim();
-    data.date=data.startDate;
-    data.caseStatus=data.outcome==='open'?'open':'closed';
-    if(data.outcome==='open'){data.endDate='';data.customerStars='';data.customerComment='';}
-    if(data.damageStatus!=='yes')data.damages='';
-    if(data.caseStatus==='closed'&&!data.endDate){$('missionError').textContent='Bitte das Einsatzende für abgeschlossene Einsätze angeben.';return;}
-    if(data.endDate && data.endDate < data.startDate){$('missionError').textContent='Das Einsatzende darf nicht vor dem Einsatzbeginn liegen.';return;}
-    if(data.customerStars&&!/^[1-5]$/.test(data.customerStars)){$('missionError').textContent='Bitte eine Kundenbewertung von 1 bis 5 Sternen auswählen.';return;}
-    if(data.rpLink&&!/^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d+\/\d+\/\d+$/.test(data.rpLink)){$('missionError').textContent='Bitte einen Discord-Link zur ersten RP-Nachricht eintragen.';return;}
-    data.dispatcherId=f.elements.dispatcherId.value.trim();
-    if(!data.dispatcherId || !characters.some(c=>c.uid===data.dispatcherId&&c.status==='approved'&&c.role==='Dispatcher')){ $('missionError').textContent='Als Dispatcher kann nur ein freigegebener Charakter mit der Position Dispatcher ausgewählt werden.';return;}
-    data.requestComment=$('missionComment').value.trim();
-    const participants=[...$('participantChecks').querySelectorAll('input:checked')].map(el=>el.value);
-    if(!REPORT_LEVELS.includes(data.level)){$('missionError').textContent='Bitte ein Einsatzlevel von E bis S auswählen.';return;}
-    if(!data.title||!data.customer||!data.location||!data.startDate||!data.situation||(data.outcome!=='open'&&(!data.events||!participants.length))){$('missionError').textContent='Einsatzname, Kunde, Einsatzort, Beginn und Ausgangslage sind erforderlich. Beim Abschluss zusätzlich Verlauf und mindestens ein Held.';return;}
-    if(reportEditTarget){
-      const original=reportEditTarget,candidate={...data,participants};
-      const fields=['title','level','customer','startDate','endDate','date','location','rpLink','customerStars','customerComment','situation','events','outcome','caseStatus','damageStatus','damages','notes','dispatcherId','participants'];
-      const patch=Object.fromEntries(fields.filter(k=>JSON.stringify(original[k]??null)!==JSON.stringify(candidate[k]??null)).map(k=>[k,candidate[k]]));
-      if(!Object.keys(patch).length){$('missionError').textContent='Es wurden keine Änderungen vorgenommen.';return;}
-      const comment=data.requestComment;
-      if(live){backend.submitReportEdit(original._dbId,candidate,comment).then(async()=>{reportFocus=original.id;$('missionDialog').close();reportEditTarget=null;await reloadRemote();navigate('mission-detail');}).catch(e=>{$('missionError').textContent='Änderungsantrag konnte nicht gespeichert werden: '+e.message;});return;}
-      original.edits=original.edits||[];
-      original.edits.unshift({id:'local-edit-'+String(nextTicket++),time:stamp(),comment,requestedBy:'Demo-Spieler',status:'pending',baseReport:clone(original),patch});
-      reportFocus=original.id;$('missionDialog').close();reportEditTarget=null;navigate('mission-detail');return;
+    evt.preventDefault();
+    const f=$('missionForm'),creating=!reportEditTarget;
+    $('missionError').textContent='';
+    const dispatcherId=String(f.elements.dispatcherId.value||'').trim();
+    const dispatcher=characters.find(c=>String(c.uid)===dispatcherId && c.status==='approved' && String(c.role||'').trim().toLowerCase()==='dispatcher');
+    if(!dispatcher){$('missionError').textContent='Bitte einen freigegebenen Dispatcher aus der Liste auswählen.';return;}
+    const base={
+      title:f.elements.title.value.trim(), level:f.elements.level.value,
+      customer:f.elements.customer.value.trim(), location:f.elements.location.value.trim(),
+      situation:f.elements.situation.value.trim(), dispatcherId
+    };
+    if(!REPORT_LEVELS.includes(base.level)){$('missionError').textContent='Bitte ein Einsatzlevel von E bis S auswählen.';return;}
+    if(!base.title||!base.customer||!base.location||!base.situation){$('missionError').textContent='Einsatzname, Kunde, Einsatzort und Ausgangslage sind erforderlich.';return;}
+    const comment=$('missionComment').value.trim();
+    if(creating){
+      // No advanced fields are sent when creating a callout. The SQL RPC sets
+      // the official start date, initial state and empty advanced fields.
+      const data={...base,requestComment:comment};
+      if(live&&!gmMode&&!dispatcherMode){$('missionError').textContent='Nur Dispatcher und die SL dürfen Einsätze anlegen.';return;}
+      if(live){
+        backend.submitReport(data).then(async id=>{
+          reportFocus=id;missionFilter='all';$('missionDialog').close();await reloadRemote();navigate('mission-detail');
+        }).catch(e=>{$('missionError').textContent='Notruf nicht gespeichert: '+e.message;});return;
+      }
+      const id='OPS-'+String(nextMission++).padStart(4,'0');
+      reports.unshift({...base,id,startDate:berlinDate(),date:berlinDate(),endDate:'',outcome:'open',caseStatus:'open',
+        participants:[],rpLink:'',events:'',damageStatus:'no',damages:'',notes:'',customerStars:'',customerComment:'',
+        requestComment:comment,status:'pending',submitted:'Demo-Spieler · '+stamp(),reviewed:''});
+      reportFocus=id;missionFilter='all';$('missionDialog').close();navigate('mission-detail');return;
     }
-    if(live&&!gmMode&&!dispatcherMode){$('missionError').textContent='Nur Dispatcher und die SL dürfen Einsätze anlegen.';return;}
-    if(live){backend.submitReport({...data,participants}).then(async id=>{reportFocus=id;missionFilter='all';$('missionDialog').close();await reloadRemote();navigate('mission-detail');}).catch(e=>{$('missionError').textContent='Bericht nicht gespeichert: '+e.message;});return;}
-    const id='OPS-'+String(nextMission++).padStart(4,'0');
-    reports.unshift({...data,id,participants,status:'pending',submitted:'Demo-Spieler · '+stamp(),reviewed:''});
-    reportFocus=id;missionFilter='all';$('missionDialog').close();navigate('mission-detail');
+    const original=reportEditTarget;
+    const closed=f.elements.outcome.value==='closed';
+    const currentClosed=original.outcome!=='open';
+    if(currentClosed&&!closed){$('missionError').textContent='Ein abgeschlossener Einsatz kann nicht wieder auf Offen gestellt werden.';return;}
+    const participants=[...$('participantChecks').querySelectorAll('input:checked')].map(el=>el.value);
+    const rpLink=f.elements.rpLink.value.trim();
+    if(rpLink&&!/^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d+\/\d+\/\d+$/.test(rpLink)){
+      $('missionError').textContent='Bitte einen Discord-Link zur ersten RP-Nachricht eintragen.';return;
+    }
+    if(closed&&(!f.elements.events.value.trim()||!participants.length)){
+      $('missionError').textContent='Zum Abschluss werden ein Einsatzverlauf und mindestens ein beteiligter Held benötigt.';return;
+    }
+    const damageStatus=f.elements.damageStatus.value;
+    const candidate={...base,
+      startDate:original.startDate||original.date,date:original.date||original.startDate,
+      outcome:closed?'closed':'open',caseStatus:closed?'closed':'open',
+      endDate:closed?(currentClosed?original.endDate:berlinDate()):'',
+      customerStars:closed?f.elements.customerStars.value:'',customerComment:closed?f.elements.customerComment.value.trim():'',
+      rpLink,participants,events:f.elements.events.value.trim(),
+      damageStatus,damages:damageStatus==='yes'?f.elements.damages.value.trim():'',notes:f.elements.notes.value.trim()
+    };
+    const fields=['title','level','customer','endDate','location','rpLink','customerStars','customerComment','situation','events','outcome','caseStatus','damageStatus','damages','notes','dispatcherId','participants'];
+    const patch=Object.fromEntries(fields.filter(k=>JSON.stringify(original[k]??null)!==JSON.stringify(candidate[k]??null)).map(k=>[k,candidate[k]]));
+    if(!Object.keys(patch).length){$('missionError').textContent='Es wurden keine Änderungen vorgenommen.';return;}
+    if(live){
+      backend.submitReportEdit(original._dbId,candidate,comment).then(async()=>{
+        reportFocus=original.id;$('missionDialog').close();reportEditTarget=null;await reloadRemote();navigate('mission-detail');
+      }).catch(e=>{$('missionError').textContent='Änderungsantrag konnte nicht gespeichert werden: '+e.message;});return;
+    }
+    original.edits=original.edits||[];
+    original.edits.unshift({id:'local-edit-'+String(nextTicket++),time:stamp(),comment,requestedBy:'Demo-Spieler',status:'pending',baseReport:clone(original),patch});
+    reportFocus=original.id;$('missionDialog').close();reportEditTarget=null;navigate('mission-detail');
   }
+
   function reset(){if(live)return;if(!confirm('Alle Änderungen, Bilder, Protokolle und Freigaben der Demo-Sitzung zurücksetzen?'))return;
     characters=[clone(BASE)];reports=clone(REPORTS);selectedId=BASE.uid;activeTab='identity';view='directory';gmMode=false;nextChar=1;nextMission=3;nextTicket=1;reportFocus=null;missionFilter='all';directoryScroll=0;missionScroll=0;renderGM();navigate('directory');}
   function renderGM(){$('gmToggle').textContent=live?(gmMode?'SPIELLEITUNG · ABMELDEN':hrMode?'HR · ABMELDEN':'MITGLIED · ABMELDEN'):(gmMode?'SPIELLEITUNG · DEMO':'SPIELERANSICHT');$('gmToggle').classList.toggle('is-gm',gmMode);}

@@ -1,82 +1,61 @@
-# SDN v0.26 – Dispatcher-Rolle und automatische Einsatz-Notrufe
+# SDN v0.27 – Notruf-Erstellung und Dispatcher-Fix
 
-**Update für die bestehende v0.25-Website, keine Neuinstallation.** Dieses Paket enthält keine echte `config.js`, keine privaten Schlüssel und keine bereits gespeicherten Daten.
+**Update für die bereits installierte v0.26.** Kein neues Projekt erstellen und keine alten SQL-Migrationen erneut ausführen.
 
-## Neue Funktionen
+## Was sich ändert
 
-- Discord-Rolle **Dispatcher** zusätzlich zu `SDN-Zugang`, SL und optional HR.
-- Die Webseite prüft diese Rolle über die bestehende serverseitige Discord-Mitgliedschaftskontrolle. Ein Dispatcher darf Einsätze erstellen sowie **die von seinem eigenen Discord-Account eingereichten** Einsatzberichte bearbeiten. Andere Spieler dürfen weiterhin eigene Charaktere bearbeiten, neue Charaktere beantragen und freigegebene Akten und Einsätze lesen. Nur SL darf Anträge genehmigen oder löschen.
-- Ein neu erstellter offener Einsatz ist ein **Notruf**: Titel, Level, Ort, Kunde, Einsatzbeginn, Ausgangslage, Dispatcher. **Noch keine Helden oder kein Einsatzverlauf nötig**, bis die Teilnehmer feststehen.
-- Ein Dispatcher **als Charakter** (Position `Dispatcher`, freigegeben) muss im Formular ausgewählt werden. Das ist getrennt von der **Discord-Rolle** des Erstellers.
-- Erst nach **SL-Freigabe** wird automatisch im konfigurierten Discord-Einsatzforum ein Beitrag mit Name, Einsatzort, Auftraggeber, Ausgangslage und dem zugewiesenen Dispatcher erstellt.
-- Spieler können dort freiwillig antworten. Der Dispatcher weist die teilnehmenden Helden danach über **Daten bearbeiten → Änderungsticket** dem Einsatz zu. Auch dieses Ticket muss die SL genehmigen.
-- Bei einem **genehmigten Abschluss** (beim Erstellen oder durch späteres Änderungsticket) antwortet der Bot mit `❌ EINSATZ ABGESCHLOSSEN`, erwähnt den Dispatcher-Account und die Besitzer der eingetragenen Helden. Der Bot setzt außerdem eine **❌-Reaktion** auf den ursprünglichen Forenbeitrag.
-- Der Thread-Link wird in der Einsatzdetailansicht gezeigt; er wird serverseitig gespeichert und lässt sich nicht über ein frei bearbeitbares Berichtsfeld manipulieren.
-- Vorhandene Berichte werden **nicht automatisch** in Discord gepostet.
+### Beim Erstellen eines Einsatzes
 
-## Installation – bitte in dieser Reihenfolge
+Sichtbar und auszufüllen:
 
-1. **Sicherung anlegen.** GitHub: vorherigen funktionierenden Commit notieren oder Branch anlegen. Supabase: Datenbankexport/Backup vor der Migration sichern. Nicht die alte Initialmigration erneut ausführen.
-2. **Discord:** Servereinstellungen → Rollen → eine Rolle `Dispatcher` erstellen/auswählen. Discord-Entwicklermodus aktivieren und die **Rollen-ID** kopieren. Weisen Sie sie den erlaubten Dispatchern zu.
-3. **Discord:** Einen neuen **Forumskanal** z. B. `sdn-notrufe` einrichten. Forum-ID kopieren (nicht eine Thread-ID). Forum für `SDN-Zugang` lesbar lassen; `Nachrichten in Threads senden` erlauben, damit Spieler ihre Teilnahme anbieten können. `Beiträge erstellen` für Spieler bei Bedarf deaktivieren.
-4. **Discord-Bot im Einsatzforum:** `Kanal ansehen`, `Nachrichten senden` (neuen Forumspost erstellen), `Nachrichten in Threads senden`, `Nachrichtenverlauf lesen`, `Reaktionen hinzufügen`, optional `Links einbetten` erlauben. Der Bot kann weiterhin in der Mitgliedschaftsliste offline wirken; die Supabase-Funktion verwendet die Discord-REST-API.
-5. **Supabase → Edge Functions → Secrets:** Folgende **neuen** Secrets hinzufügen:
+- Einsatzbezeichnung
+- Einsatzlevel E–S
+- Kunde
+- Einsatzort
+- Ausgangslage
+- **Dispatcher** (aus genehmigten Charakteren mit Position `Dispatcher`)
+- Anmerkung zum Antrag (freiwillig)
 
-   | Name | Wert |
-   | --- | --- |
-   | `DISCORD_DISPATCHER_ROLE_ID` | Rollen-ID von `Dispatcher` |
-   | `DISCORD_OPERATION_FORUM_CHANNEL_ID` | ID des Einsatzforums |
+Automatisch festgelegt und nicht veränderbar:
 
-   Bestehende Werte `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_GM_ROLE_ID`, `DISCORD_HR_ROLE_ID`, `DISCORD_ACCESS_ROLE_ID`, `SDN_ALLOWED_ORIGINS` und `DISCORD_FORUM_CHANNEL_ID` bleiben bestehen. **Nicht im GitHub-Repository speichern.**
-6. **SQL-Migration:** Supabase → SQL Editor → **den Inhalt** der Datei `supabase/migrations/202610300001_dispatcher_operations_forum.sql` kopieren und einmalig ausführen. Das ergänzt die Dispatcher-Berechtigung, überprüft Berichtsanträge serverseitig und legt die Notruf-Warteschlange an. Es entfernt keine bisherigen Einsätze. **Diese Migration ist nicht für blindes Wiederholen gedacht.**
-7. **Rollenprüffunktion aktualisieren:** Die mitgelieferte Datei `supabase/functions/verify-discord/index.ts` in deinem lokalen SDN-Projekt ersetzen. PowerShell im Projektordner:
+- Abschluss/Ergebnis = **Offen**
+- Einsatzbeginn = aktuelles Datum in der Zeitzone **Europe/Berlin**, vom **Server** festgelegt
+- Einsatzende = leer
 
-   ```powershell
-   npx.cmd supabase functions deploy verify-discord
-   ```
+**Erst nach Freigabe des neuen Einsatzes** können bei einem Änderungsantrag Link zum RP, beteiligte Helden, Einsatzverlauf, zivile Infrastruktur, Schadensbericht, Zusatzvermerke, Kundenbewertung und Abschluss ergänzt werden.
 
-8. **Neue Forum-Funktion deployen:** Ordner `supabase/functions/sync-operation-forum` aus dem Update in dein lokales Projekt kopieren:
+### Beim späteren Bearbeiten
 
-   ```powershell
-   npx.cmd supabase functions deploy sync-operation-forum
-   ```
+- Ergebnis-Auswahl nur **Offen** / **Abgeschlossen**. Keine Kategorien mehr für Erfolg/Teilerfolg/Fehlschlag.
+- Bei erstmaligem Wechsel zu **Abgeschlossen** setzt der Server das aktuelle Datum als Einsatzende (Datum des Änderungsantrags). Das Enddatum ist nicht manuell editierbar.
+- Für den Abschluss bleiben Einsatzverlauf und mindestens ein beteiligter Held erforderlich. Die SL muss den Änderungsantrag genehmigen, bevor der Fall offiziell geschlossen wird und der Bot die Discord-Abschlussmeldung senden darf.
+- Eine abgeschlossene Akte kann über dieses Formular nicht wieder geöffnet werden (der vorhandene ❌-Forumstatus würde sonst widersprechen).
+- Historische abgeschlossene Berichte mit alten Erfolgsstatus bleiben lesbar und werden als **Abgeschlossen** dargestellt.
 
-9. **Website:** `index.html`, `app.js`, `backend.js` aus dem ZIP in deinem Repository `timan52/SDN` ersetzen, committen und auf `main` pushen. **Nicht** `config.js`, `styles.css`, die Portrait-Dateien oder die übrigen Supabase-Funktionen ersetzen. Website mit `Strg+Umschalt+R` aktualisieren. Durch neuen Discord-Login/Neuladen wird die Dispatcher-Rolle erkannt.
+### Dispatcher-Übertragung
 
-## Funktionstest mit zwei Rollen
+v0.26 meldete bei einer realen Erstellung `Ein Dispatcher muss ausgewählt werden`, obwohl im Formular einer ausgewählt war. Der konkrete Weg, an dem die Dispatcher-ID im Live-Projekt fehlte, lässt sich ohne Datenbank-Logs nicht abschließend nachweisen. v0.27 baut den neuen Notruf **serverseitig aus einer expliziten Feldliste** auf, übernimmt `dispatcherId` ausdrücklich und prüft die übermittelte UUID zusätzlich im Browser-Backend und in der Datenbank. Falls die Übermittlung weiterhin scheitert, gibt es differenzierte Fehlermeldungen (fehlt / ungültiges Format / keine genehmigte Dispatcher-Position).
 
-**A. Nutzer ohne Dispatcher-Rolle:** Kann Personalakten beantragen, sieht freigegebene Einsätze, aber keinen Button `Einsatzprotokoll erstellen`. Direkte RPC-Aufrufe sollen ebenfalls abgewiesen werden.
+## Installation
 
-**B. Nutzer mit Dispatcher-Rolle:** Sieht den Erstellen-Button. Kann einen offenen Einsatz ohne Helden und ohne Verlauf, jedoch mit **Titel, Kunde, Einsatzort, Einsatzlevel, Startdatum, Ausgangslage und Dispatcher-Charakter** absenden. Das neue Protokoll bleibt `PENDING`; es darf noch kein neuer Discord-Post erscheinen.
+1. **Sicherung:** GitHub-Commit der funktionierenden v0.26 notieren, bestehende Datenbank sichern.
+2. **Supabase → SQL Editor:** **Dateiinhalt** von `supabase/migrations/202610300002_notruf_creation.sql` komplett einfügen und **einmal ausführen**. Vorher muss die v0.26-Migration `202610300001_dispatcher_operations_forum.sql` erfolgreich ausgeführt worden sein.
+3. **GitHub:** Im Repository `timan52/SDN` die drei Dateien `index.html`, `app.js` und `backend.js` durch dieses Update ersetzen; auf `main` committen und pushen. **Nicht** `config.js`, `styles.css`, `portrait-editor.js`, Portraitdateien oder Secret-Dateien ersetzen.
+4. Die Website unter `https://timan52.github.io/SDN/` mit `Strg+Umschalt+R` neu laden.
+5. Ersten Test als Dispatcher mit seiner Discord-Rolle bzw. als SL machen. Beim Erstellen eines neuen Notrufs einen **freigegebenen Charakter mit Position Dispatcher** auswählen und absenden. Der Status ist `PENDING`; noch kein Discord-Beitrag.
+6. Als SL genehmigen. Jetzt sollte die bestehende v0.26-Forenfunktion den Notruf veröffentlichen. Anschließend als ursprünglicher Ersteller über **Daten bearbeiten** ein Ticket mit RP-Link/Teilnehmern/Verlauf stellen und von der SL genehmigen lassen.
+7. Schließlich **Abgeschlossen** auswählen, einen Verlauf und mindestens einen Helden zuordnen, Änderungsantrag stellen und genehmigen lassen. Der Bot soll danach die bekannte ❌-Abschlussmeldung erzeugen.
 
-**C. SL:** Öffnet die Einsatzdetailansicht, genehmigt den Bericht. Danach sollte ein Forumspost mit `🚨 OPS-...` erscheinen. Die genehmigte Akte enthält `↗ NOTRUF IM DISCORD-FORUM`. Das bestehende Charakterforum aus v0.25 bleibt unabhängig.
+Für dieses Update müssen **keine Edge Functions neu veröffentlicht** werden. Die vorher eingerichteten Funktionen `verify-discord` und `sync-operation-forum` bleiben unverändert.
 
-**D. Dispatcher:** Öffnet sein eigenes Protokoll, ergänzt nach Forum-Rückmeldungen die Helden und sendet ein Änderungsticket. Erst nach SL-Genehmigung ist die neue Team-Zuweisung offiziell.
+## Wenn weiter ein Dispatcher-Fehler erscheint
 
-**E. Abschluss:** Dispatcher ergänzt Einsatzverlauf, Einsatzende und Abschluss/Ergebnis; im abgeschlossenen Protokoll muss mindestens ein Held stehen. SL genehmigt das Änderungsticket. Im gleichen Forumspost erscheint die Abschlussnachricht, die Beteiligten werden gepingt und der Bot setzt ❌ auf die Startnachricht.
+- Browser mit `Strg+Umschalt+R` neu laden und prüfen, dass `app.js` und `backend.js` tatsächlich aus v0.27 stammen.
+- Sicherstellen, dass das SQL-Update im **gleichen Supabase-Projekt** ausgeführt wurde, das die Webseite in `config.js` verwendet.
+- Der ausgewählte Charakter muss **freigegeben** sein und seine Position muss **Dispatcher** heißen. Die Discord-Rolle `Dispatcher` des anmeldenden Nutzers ist ein anderes Berechtigungsmerkmal.
+- Den genauen Fehlertext nach dem Versuch aus der Website kopieren. Die SQL-Migration liefert jetzt unterscheidbare Meldungen.
+- **Keine Tokens** und keine `service_role`-Schlüssel zur Fehleranalyse veröffentlichen.
 
-**F. Rechte:** Ein fremder Dispatcher kann die Einsatzakte lesen, aber keinen Änderungsantrag dafür stellen. Nur SL sieht und verwendet Freigabe- und Löschaktionen.
+## Tests und Grenzen
 
-## Wenn Discord nichts veröffentlicht
-
-1. Prüfen: Handelt es sich um einen **genehmigten** Bericht? Ein Entwurf oder ein offenes Freigabeticket wird nicht veröffentlicht.
-2. Als SL die Einsatzakte öffnen und **DISCORD-NOTRUF SYNCHRONISIEREN** klicken. Nicht mehrfach auf den Button klicken, wenn Discord gerade einen Beitrag erstellen könnte.
-3. Supabase → Edge Functions → `sync-operation-forum` → Logs/Invocations prüfen.
-4. Im SQL Editor lässt sich der Auftragsstatus prüfen:
-
-   ```sql
-   select r.report_no, r.status, j.state, j.attempts, j.last_error,
-          j.thread_id, j.close_revision, j.notified_revision
-   from public.sdn_reports r
-   left join public.sdn_operation_forum_jobs j on j.report_id=r.id
-   order by r.created_at desc limit 20;
-   ```
-
-**Wichtige Einschränkungen:**
-
-- Die Freigabe wird in Supabase sofort gespeichert. Die Discord-Synchronisierung wird beim SL-Genehmigungsklick ausgeführt und bei der nächsten SL-Anmeldung erneut versucht. **Es ist kein dauerhaft laufender Bot oder zeitgesteuerter Worker installiert.** Eine durchgehend automatische Verarbeitung auch ohne SL-Login würde später einen Cron/Webhook erfordern.
-- Wie bei der Charakterforum-Funktion v0.25 kann ein seltener Ausfall **nach erfolgreichem Discord-Post und vor dem Speichern der Discord-ID** beim Retry zu einem doppelten Beitrag führen. In diesem Fall vor einem erneuten Versuch das Forum kontrollieren.
-- Das erneute Öffnen eines bereits abgeschlossenen Einsatzes entfernt eine früher gesetzte ❌-Reaktion **nicht**. Falls Wiederöffnungen im RP benötigt werden, sollten wir den Ablauf später ausdrücklich modellieren.
-- Verknüpfte ehemalige Forenposts werden beim Löschen eines Einsatzes **nicht** automatisch auf Discord gelöscht.
-- Der bestehende, zuvor gemeldete Fehler der **Charakterforum-Synchronisierung** aus v0.25 wird durch diese neue Einsatzfunktion nicht automatisch behoben. Beide Edge Functions sind getrennt.
-- Die neue Backend- und SQL-Version wurde **nicht gegen deine laufende Datenbank und deinen Discord-Server getestet**. Nach dem Installieren erst mit einem Testeinsatz prüfen.
+JavaScript-Syntax und Browserabläufe wurden mit simulierten Discord-/Supabase-Antworten geprüft: Formular im Erstellen-Modus, Auswahl eines Dispatcher-Charakters, übersandtes Payload, spätere Bearbeitung, Abschlussdatum und Beteiligte. Die neue SQL-Migration wurde **nicht** gegen dein echtes Supabase-Projekt und den dortigen Datenbestand ausgeführt. Deshalb zunächst mit Testeinsätzen prüfen.

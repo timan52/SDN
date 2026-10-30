@@ -252,6 +252,11 @@
     return handle(result);
   }
   async function submitReport(report) {
+    // Check the exact object about to cross the RPC boundary, rather than
+    // relying exclusively on the select widget's validity.
+    if (!report || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(report.dispatcherId || ''))) {
+      throw new Error('Der Dispatcher wurde nicht korrekt übertragen. Bitte neu auswählen und erneut absenden.');
+    }
     return handle(await client.rpc('sdn_submit_report', { p_report: report }));
   }
   async function reviewReport(dbId, approve) {

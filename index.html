@@ -7,6 +7,14 @@
   <meta name="description" content="Inoffizieller SDN-Personalakten-Prototyp für ein Discord-Rollenspiel." />
   <title>SDN · Personalakten – Aktenblatt</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Emergency callout creation: show only the initial callout fields. */
+    #missionDialog [hidden] { display:none !important; }
+    .sdn-callout-status {border:1px solid #728078; padding:14px 18px; display:flex; gap:15px; align-items:center; flex-wrap:wrap;}
+    .sdn-callout-status strong {font:600 0.8rem monospace; letter-spacing:.04em;}
+    .sdn-callout-status span {font-size:.9rem;}
+    #missionDialog input[readonly] {cursor:default; opacity:.85;}
+  </style>
   <script src="config.js" defer></script>
   <script src="backend.js" defer></script>
   <script src="portrait-editor.js" defer></script>
@@ -36,7 +44,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h5"/></svg>
         </button>
       </div>
-      <div class="rail-bottom" title="Mitgliederportal">v0.23<span>●</span></div>
+      <div class="rail-bottom" title="Mitgliederportal">v0.27<span>●</span></div>
     </aside>
 
     <div class="main-column">
@@ -121,8 +129,8 @@
           <label class="span2">EINSATZBEZEICHNUNG *<input name="title" maxlength="100" required placeholder="z. B. Zwischenfall am Hafen" /></label>
           <label>EINSATZLEVEL *<select name="level" required><option value="">Level auswählen</option><option value="E">E</option><option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option><option value="S">S</option></select></label>
           <label class="span2">KUNDE *<input name="customer" required maxlength="130" placeholder="Auftraggeber / Kunde" /></label>
-          <label class="span2">ABSCHLUSS / ERGEBNIS *<select name="outcome"><option value="open">Noch offen</option><option value="success">Erfolgreich abgeschlossen</option><option value="partial">Teilweise erfolgreich</option><option value="failure">Fehlgeschlagen</option></select></label>
-          <div class="sdn-customer-review span2" id="missionCustomerReview"><div class="sdn-review-heading"><strong>KUNDENBEWERTUNG</strong><span id="customerReviewHint">ERST BEI ABGESCHLOSSENEM FALL VERFÜGBAR</span></div>
+          <div class="span2 sdn-callout-status" id="missionInitialStatus"><strong>ABSCHLUSS / ERGEBNIS</strong><span>OFFEN · wird nach der Freigabe als Notruf veröffentlicht</span></div><label class="span2" data-mission-edit-only>ABSCHLUSS / ERGEBNIS <select name="outcome"><option value="open">Offen</option><option value="closed">Abgeschlossen</option></select></label>
+          <div class="sdn-customer-review span2" id="missionCustomerReview" data-mission-edit-only><div class="sdn-review-heading"><strong>KUNDENBEWERTUNG</strong><span id="customerReviewHint">ERST BEI ABGESCHLOSSENEM FALL VERFÜGBAR</span></div>
             <label>KUNDENSTERNE <span class="field-hint">Nur bei abgeschlossenem Fall</span>
               <select name="customerStars" aria-label="Kundensterne von 1 bis 5">
                 <option value="">Keine Bewertung</option>
@@ -137,17 +145,17 @@
               <textarea name="customerComment" rows="3" maxlength="2000" placeholder="Rückmeldung des Kunden zum abgeschlossenen Einsatz …"></textarea>
             </label>
           </div>
-          <label>EINSATZBEGINN *<input name="startDate" type="date" required /></label><label>EINSATZENDE<input name="endDate" type="date" disabled /></label><label class="span2">EINSATZORT *<input name="location" required maxlength="150" placeholder="Ort des Einsatzes" /></label><label class="span2">LINK ZUM RP<input name="rpLink" type="url" maxlength="300" placeholder="https://discord.com/channels/…/…/…" /></label>
-          <label class="span2">BETEILIGTE HELDEN<span class="field-hint">Bei einem offenen Notruf noch keine Helden erforderlich. Später können alle freigegebenen Helden zugewiesen werden.</span><div class="participant-checks" id="participantChecks"></div></label>
+          <label>EINSATZBEGINN <span class="field-hint">Automatisch festgelegt, nicht bearbeitbar</span><input name="startDate" type="date" readonly required /></label><label data-mission-edit-only>EINSATZENDE <span class="field-hint">Wird beim Abschluss automatisch festgelegt</span><input name="endDate" type="date" readonly disabled /></label><label class="span2">EINSATZORT *<input name="location" required maxlength="150" placeholder="Ort des Einsatzes" /></label><label class="span2" data-mission-edit-only>LINK ZUM RP<input name="rpLink" type="url" maxlength="300" placeholder="https://discord.com/channels/…/…/…" /></label>
+          <label class="span2" data-mission-edit-only>BETEILIGTE HELDEN<span class="field-hint">Bei einem offenen Notruf noch keine Helden erforderlich. Später können alle freigegebenen Helden zugewiesen werden.</span><div class="participant-checks" id="participantChecks"></div></label>
           <label class="span2">DISPATCHER *<span class="field-hint">Freigegebener Charakter mit der Position Dispatcher erforderlich</span><select name="dispatcherId" id="missionDispatcher" required><option value="">Dispatcher auswählen</option></select></label>
 
           
           <label class="span2">AUSGANGSLAGE *<textarea name="situation" rows="3" required maxlength="3000" placeholder="Was war bekannt? Wie kam es zur Alarmierung?"></textarea></label>
-          <label class="span2">EINSATZVERLAUF <span class="field-hint">Beim offenen Notruf später ergänzbar, beim Abschluss erforderlich</span><textarea name="events" rows="5" maxlength="5000" placeholder="Was ist in welcher Reihenfolge geschehen?"></textarea></label>
+          <label class="span2" data-mission-edit-only>EINSATZVERLAUF <span class="field-hint">Beim offenen Notruf später ergänzbar, beim Abschluss erforderlich</span><textarea name="events" rows="5" maxlength="5000" placeholder="Was ist in welcher Reihenfolge geschehen?"></textarea></label>
           
-          <label>ZIVILE INFRASTRUKTUR BETROFFEN?<select name="damageStatus"><option value="no">Keine bekannten Schäden</option><option value="yes">Ja, Schäden entstanden</option><option value="unknown">Noch ungeklärt</option></select></label>
-          <label class="span2">SCHADENSBERICHT<textarea name="damages" disabled rows="3" maxlength="3000" placeholder="Gebäude, Fahrzeuge, Sachschäden, Umfang, bekannte Folgen …"></textarea></label>
-          <label class="span2">ZUSATZVERMERKE / BESONDERE VORKOMMNISSE<textarea name="notes" rows="3" maxlength="3000" placeholder="Zeugen, zusätzliche Hinweise, ungeklärte Punkte …"></textarea></label>
+          <label data-mission-edit-only>ZIVILE INFRASTRUKTUR BETROFFEN?<select name="damageStatus"><option value="no">Keine bekannten Schäden</option><option value="yes">Ja, Schäden entstanden</option><option value="unknown">Noch ungeklärt</option></select></label>
+          <label class="span2" data-mission-edit-only>SCHADENSBERICHT<textarea name="damages" disabled rows="3" maxlength="3000" placeholder="Gebäude, Fahrzeuge, Sachschäden, Umfang, bekannte Folgen …"></textarea></label>
+          <label class="span2" data-mission-edit-only>ZUSATZVERMERKE / BESONDERE VORKOMMNISSE<textarea name="notes" rows="3" maxlength="3000" placeholder="Zeugen, zusätzliche Hinweise, ungeklärte Punkte …"></textarea></label>
         </div><div class="ticket-explanation"><label for="missionComment">ANMERKUNG ZUM ANTRAG <span>OPTIONAL</span></label><textarea id="missionComment" maxlength="1500" rows="3" placeholder="Anmerkung für die Spielleitung …"></textarea></div><p id="missionError" class="form-error" role="alert"></p>
       </div>
       <footer class="dialog-footer"><button class="dialog-secondary" id="cancelMission" type="button">ABBRECHEN</button><button class="dialog-primary" type="submit">ABSENDEN</button></footer>
