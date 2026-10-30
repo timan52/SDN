@@ -88,6 +88,20 @@
     if (!res.ok) throw new Error(json.error||'Portraitveröffentlichung fehlgeschlagen');
     return json;
   }
+  async function syncCharacterForum(characterId = null) {
+    const sess = await session();
+    if (!sess || !memberInfo?.admin) throw new Error('Die Foren-Veröffentlichung erfordert eine Spielleitungsrolle.');
+    const response = await fetch(`${cfg.supabaseUrl}/functions/v1/sync-character-forum`, {
+      method:'POST', cache:'no-store',
+      headers:{'Content-Type':'application/json','apikey':cfg.supabasePublishableKey,'Authorization':`Bearer ${sess.access_token}`},
+      body:JSON.stringify(characterId ? { characterId } : {}),
+    });
+    let data={};try{data=await response.json();}catch{}
+    if (!response.ok && response.status !== 207) throw new Error(data.error || 'Discord-Forenbeitrag konnte nicht erstellt werden.');
+    if (data.errors?.length) throw new Error(data.errors.join(' / '));
+    return data;
+  }
+
   async function loadAll() {
     if (!memberInfo?.member) throw new Error('Mitgliedschaft erforderlich');
     const [c, s, t, r, a, profiles, notes, reportEdits] = await Promise.all([
@@ -190,6 +204,10 @@
         try { await publishPortrait(dbId); }
         catch(e) { return {warning:'Ticket genehmigt, aber das Portrait ist noch nicht veröffentlicht: '+e.message+' – erneute Veröffentlichung in der Akte möglich.'}; }
       }
+      if (ticket.is_new) {
+        try { await syncCharacterForum(ticket.character_id); }
+        catch (e) { return {warning:'Akte genehmigt, aber Discord-Forenbeitrag ist noch offen: '+e.message+' – die SL kann die Veröffentlichung beim nächsten Besuch automatisch erneut versuchen.'}; }
+      }
     }
     return {warning:null};
   }
@@ -232,7 +250,7 @@
     enabled: configured, prepare, session, login, logout, verify, loadAll,
     submitTicket, reviewTicket, setCharacterStatus, submitReport, reviewReport, submitReportEdit, reviewReportEdit, addFileNote,
     deleteCharacter, deleteReport, setCharacterActivity,
-    uploadPortraitBlob, originalBlob, publishPortrait,
+    uploadPortraitBlob, originalBlob, publishPortrait, syncCharacterForum,
     proposalImageUrl: path => previewUrls.get(path) || '',
     imageUrl: path => (typeof path === 'string' && /^https:\/\/[a-z0-9-]+\.github\.io\//i.test(path) ? path : ''),
     get userId() { return user?.id || null; },

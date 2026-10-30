@@ -42,7 +42,7 @@
   const picked = () => characters.find(c=>c.uid===selectedId) || characters[0];
   const total = c => STAT_KEYS.reduce((v,[k])=>v+Number(c?.stats?.[k]||0),0);
   const stamp = () => new Date().toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'});
-  const editableKeys = ['name','alias','role','hasSecretIdentity','height','weight','age','sex','birthplace','birthday','discordChannelUrl','classCode','raceType','raceName','raceOrigin','raceFeatures','skillNotes','equipmentItems','costumeDescription','hair','eyes','build','skin','distinguishing','description','impression','character','motivation','behavior','assessment','likes','dislikes','background','criminalRecord','formerAffiliations','medicalConditions','medicalInjuries','medicalTreatments','medicalAllergies','powerName','origin','powerDescription','weaknesses','generalWeaknesses','generalStrengths','generalAbilities'];
+  const editableKeys = ['name','alias','role','hasSecretIdentity','height','weight','age','sex','birthplace','birthday','classCode','raceType','raceName','raceOrigin','raceFeatures','skillNotes','equipmentItems','costumeDescription','hair','eyes','build','skin','distinguishing','description','impression','character','motivation','behavior','assessment','likes','dislikes','background','criminalRecord','formerAffiliations','medicalConditions','medicalInjuries','medicalTreatments','medicalAllergies','powerName','origin','powerDescription','weaknesses','generalWeaknesses','generalStrengths','generalAbilities'];
   const secretEditKeys = ['notes'];
   const fieldNames = {name:'Name',alias:'Alias',role:'Position',hasSecretIdentity:'Geheime Identität',height:'Größe',weight:'Gewicht',age:'Alter',sex:'Geschlecht',birthplace:'Geburtsort',birthday:'Geburtstag',discordChannelUrl:'Discord-Charakterkanal (URL)',classCode:'Fähigkeitsklasse',raceType:'Rasse',raceName:'Bezeichnung der Rasse',raceOrigin:'Herkunft der Rasse',raceFeatures:'Besonderheiten der Rasse',skillNotes:'Anmerkungen zur Skillmatrix',equipmentItems:'Ausstattung',costumeDescription:'Superheldenkostüm',hair:'Haarfarbe',eyes:'Augenfarbe',build:'Statur',skin:'Teint',distinguishing:'Besondere Merkmale',description:'Beschreibung des Aussehens',impression:'Besonderheiten',character:'Persönlichkeit',motivation:'Motivation',behavior:'Sozialverhalten',assessment:'Psychologisches Gutachten',likes:'Likes',dislikes:'Dislikes',background:'Hintergrundgeschichte',criminalRecord:'Strafregister',formerAffiliations:'Ehemalige Zugehörigkeiten',medicalConditions:'Vorerkrankungen / Dauerhafte Beschwerden',medicalInjuries:'Verletzungen / Medizinische Vorfälle',medicalTreatments:'Behandlungen / Operationen',medicalAllergies:'Allergien / Medizinische Einschränkungen',powerName:'Fähigkeitsname',origin:'Ursprung',powerDescription:'Beschreibung',weaknesses:'Schwächen',generalWeaknesses:'Allgemeine Schwächen',generalStrengths:'Allgemeine Stärken',generalAbilities:'Sonstige allgemeine Fähigkeiten',notes:'TOP SECRET'};
   const sensitiveKeys = new Set(['classCode','powerName','origin','powerDescription','weaknesses','generalWeaknesses','generalStrengths','generalAbilities','powers','stats']);
@@ -236,6 +236,8 @@
     const publicPortrait=c.photo?(live ? backend.imageUrl(c.photo) : c.photo):'';
     const channelLink=/^https:\/\/discord\.com\/channels\/\d+\/\d+$/.test(c.discordChannelUrl||'')
       ? `<a class="sdn-head-link" href="${safe(c.discordChannelUrl)}" target="_blank" rel="noopener noreferrer">↗ CHARAKTERKANAL</a>` : '';
+    const forumWarning=gmMode && live && c.status==='approved' && !channelLink
+      ? `<div class="sdn-publish-warning">Discord-Forenbeitrag noch nicht verknüpft. <button type="button" data-sync-forum="${safe(c.uid)}">FORENBEITRAG ERSTELLEN / ERNEUT VERSUCHEN</button></div>` : '';
     const publishWarning=gmMode && live && c.portrait?.preview && c.portrait.preview!==c.portrait.publishedPreview
       ? (()=>{const ticket=c.proposals.find(t=>t.status==='approved' && (t.isNew||t.operations.some(op=>op.kind==='portrait'&&op.after?.preview===c.portrait.preview)));return ticket?`<div class="sdn-publish-warning portrait-publication">Portrait genehmigt, aber noch nicht veröffentlicht. <button type="button" data-publish-portrait="${safe(ticket._dbId)}">VERÖFFENTLICHUNG ERNEUT VERSUCHEN</button></div>`:'';})() : '';
     $('recordBody').innerHTML=`<article class="paper-frame sdn-aktenblatt">
@@ -243,10 +245,16 @@
       <div class="file-main"><div class="sdn-head-layout"><div class="portrait-container ${publicPortrait?'':'placeholder'}">${publicPortrait?`<img src="${safe(publicPortrait)}" alt="Portrait von ${safe(c.alias)}" />`:`<span>${safe((c.alias||'?')[0])}</span>`}</div>
       <div class="sdn-head-data"><div class="eyebrow">PERSONALAKTE / ${safe(c.sdnId)}</div><div class="file-titleline"><div><h2>${safe(c.alias)}</h2><div class="sdn-head-badges"><span class="sdn-record-position sdn-position-${positionClass(c)}">${show(c.role)}</span>${activityBadge(c)}</div></div><div class="classification approval-stamp ${safe(c.status)}">${statusText(c.status)}</div></div>
         <div class="sdn-head-info"><div><small>SPIELER (DISCORD)</small><strong>${safe(ownerName(c))}</strong></div>${channelLink?`<div class="sdn-head-channel">${channelLink}</div>`:''}</div>
-      </div></div></div>${publishWarning}
+      </div></div></div>${publishWarning}${forumWarning}
       <nav class="paper-tabs" aria-label="Abschnitte der Personalakte" role="tablist">${tabs.map(([id,label])=>`<button class="paper-tab ${activeTab===id?'active':''} ${id==='secret'?'secret-tab':''}" type="button" role="tab" data-tab="${id}" aria-selected="${activeTab===id}">${label}</button>`).join('')}</nav>
       <section class="tab-content" role="tabpanel">${tabContent(c)}</section><div class="file-bottom"><span>SDN / ${safe(c.sdnId)}</span><span>INOFFIZIELLES DISPATCH-FANPROJEKT</span></div>
     </article>`;
+    document.querySelectorAll('[data-sync-forum]').forEach(button=>button.addEventListener('click',async()=>{
+      try{button.disabled=true;const response=await backend.syncCharacterForum(button.dataset.syncForum);
+        await reloadRemote();
+        if(!response.created && !response.alreadyLinked)alert('Kein Forenbeitrag erstellt. Bitte Supabase-Protokoll der Edge Function prüfen.');
+      }catch(e){button.disabled=false;alert('Discord-Forenbeitrag noch nicht erstellt: '+e.message);}
+    }));
     document.querySelectorAll('[data-publish-portrait]').forEach(button=>button.addEventListener('click',async()=>{
       try{button.disabled=true;await backend.publishPortrait(button.dataset.publishPortrait);await reloadRemote();}
       catch(e){button.disabled=false;alert('GitHub-Veröffentlichung fehlgeschlagen: '+e.message);}
@@ -430,7 +438,7 @@
     if(isNew&&gmMode)STAT_KEYS.forEach(([k])=>{editTarget.stats[k]=null;});
     $('dialogTitle').textContent=isNew?'NEUE PERSONALAKTE':'AKTE BEARBEITEN';
     const positions=['Superheld','Dispatcher','Teamleiter','Manager','Standortleitung','Techniker','Arzt'];
-    const nameFields=['name','alias'].map(key=>formInput(key,fieldNames[key],{max:150})).join('')+selectField('role','POSITION',[['','Position auswählen'],...positions.map(x=>[x,x])])+selectField('hasSecretIdentity','GEHEIME IDENTITÄT',[['','Bitte auswählen'],['yes','Ja'],['no','Nein']])+['age','height','weight','birthplace','birthday'].map(key=>formInput(key,fieldNames[key],{max:150})).join('')+selectField('sex','GESCHLECHT',[['','Bitte auswählen'],['male','Männlich'],['female','Weiblich'],['diverse','Divers']])+formInput('discordChannelUrl',fieldNames.discordChannelUrl,{max:150});
+    const nameFields=['name','alias'].map(key=>formInput(key,fieldNames[key],{max:150})).join('')+selectField('role','POSITION',[['','Position auswählen'],...positions.map(x=>[x,x])])+selectField('hasSecretIdentity','GEHEIME IDENTITÄT',[['','Bitte auswählen'],['yes','Ja'],['no','Nein']])+['age','height','weight','birthplace','birthday'].map(key=>formInput(key,fieldNames[key],{max:150})).join('')+selectField('sex','GESCHLECHT',[['','Bitte auswählen'],['male','Männlich'],['female','Weiblich'],['diverse','Divers']]);
     const appearance=['hair','eyes','build','skin','distinguishing'].map(k=>formInput(k,fieldNames[k])).join('')+['description','impression'].map(k=>formInput(k,fieldNames[k],{area:true,wide:true,max:2500})).join('');
     const raceFields=selectField('raceType','RASSE',[['','Keine Daten vorhanden'],['human','Mensch'],['other','Andere']])+
       `<div class="span2 sdn-race-details" id="raceOtherFields"><div class="form-grid">${formInput('raceName','BEZEICHNUNG DER RASSE',{max:150})}${formInput('raceOrigin','HERKUNFT DER RASSE',{area:true,wide:true,max:2500})}${formInput('raceFeatures','BESONDERHEITEN DER RASSE',{area:true,wide:true,max:3500})}</div></div>`;
@@ -791,11 +799,24 @@
     if(!live){showGate('SYSTEM NICHT KONFIGURIERT','Bitte zuerst Supabase und Discord verbinden. Siehe README.md. Die v0.5-ZIP bleibt als lokale Designvorschau verfügbar.');return;}
     try{
       const sess=await backend.session();
-      if(!sess){showGate('PERSONNEL ACCESS','Nur Mitglieder des Discord-RP-Servers dürfen Personalakten lesen.',true);return;}
+      if(!sess){showGate('PERSONNEL ACCESS','Für den SDN-Zugang benötigst du eine Freigaberolle der Spielleitung. Stelle deine Charakteridee zunächst im Discord-Ticketsystem vor.',true);return;}
       const role=await backend.verify();
-      if(!role.member){showGate('ACCESS DENIED','Dieser Discord-Account ist kein bestätigtes Mitglied des RP-Servers.');return;}
+      if(!role.member){showGate('ACCESS DENIED','Du benötigst die SDN-Zugangsrolle. Reiche deine Charakteridee zuerst über ein Discord-Ticket bei der Spielleitung ein.');return;}
       gmMode=role.admin;hrMode=Boolean(role.hr);renderGM();
+      // An SL visit retries queued forum publications after temporary Discord outages.
+      if (gmMode) {
+        try { await backend.syncCharacterForum(); }
+        catch (e) { console.warn('Forum-Synchronisierung ausstehend:', e.message); }
+      }
       await reloadRemote();navigate('directory');
+      // Discord posts link directly to the approved personnel file.
+      const requested = new URLSearchParams(location.search).get('character')
+        || sessionStorage.getItem('sdn_requested_character');
+      if (requested && /^[0-9a-f-]{36}$/i.test(requested)) {
+        sessionStorage.removeItem('sdn_requested_character');
+        const linked = characters.find(c => c.uid === requested && c.status === 'approved');
+        if (linked) { selectedId=linked.uid;activeTab='identity';navigate('personnel'); }
+      }
       $('authGate').hidden=true;document.body.classList.remove('secure-locked');
       document.querySelector('.sync-indicator').innerHTML='<i></i> SERVER CONNECTED';
       // Display the authenticated member's verified Discord server name, never a placeholder.
@@ -806,12 +827,16 @@
       nameSlot.title = name ? 'Discord: ' + name : '';
       document.querySelector('.topbar-cut').hidden = !name;
       setInterval(async()=>{
-        try{const fresh=await backend.verify();if(!fresh.member){showGate('ACCESS REVOKED','Die Mitgliedschaft wurde nicht mehr bestätigt.');return;}gmMode=fresh.admin;hrMode=Boolean(fresh.hr);renderGM();}
+        try{const fresh=await backend.verify();if(!fresh.member){showGate('ACCESS REVOKED','Deine SDN-Zugangsrolle wurde nicht mehr bestätigt.');return;}gmMode=fresh.admin;hrMode=Boolean(fresh.hr);renderGM();}
         catch{showGate('ACCESS PAUSED','Sicherheitsprüfung nicht möglich. Bitte Seite neu laden.');}
       },2*60*1000);
     }catch(error){showGate('VERBINDUNG FEHLGESCHLAGEN',error.message);}
   }
-  $('authLogin').addEventListener('click',()=>backend.login().catch(e=>showGate('LOGIN FEHLGESCHLAGEN',e.message,true)));
+  $('authLogin').addEventListener('click',()=>{
+    const wanted=new URLSearchParams(location.search).get('character');
+    if(wanted && /^[0-9a-f-]{36}$/i.test(wanted)) sessionStorage.setItem('sdn_requested_character',wanted);
+    backend.login().catch(e=>showGate('LOGIN FEHLGESCHLAGEN',e.message,true));
+  });
   $('authRetry').addEventListener('click',()=>location.reload());
   startOnline();
 })();
