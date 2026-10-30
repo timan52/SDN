@@ -102,9 +102,23 @@
     return data;
   }
 
+  async function syncOperationForum(reportId = null) {
+    const sess = await session();
+    if (!sess || !memberInfo?.admin) throw new Error('Nur die SL darf Discord-Notrufe synchronisieren.');
+    const response = await fetch(`${cfg.supabaseUrl}/functions/v1/sync-operation-forum`, {
+      method:'POST', cache:'no-store',
+      headers:{'Content-Type':'application/json','apikey':cfg.supabasePublishableKey,'Authorization':`Bearer ${sess.access_token}`},
+      body:JSON.stringify(reportId ? { reportId } : {}),
+    });
+    let data={};try { data=await response.json(); } catch {}
+    if (!response.ok && response.status!==207) throw new Error(data.error||'Discord-Einsatzforum nicht erreichbar');
+    if (data.errors?.length) throw new Error(data.errors.join(' / '));
+    return data;
+  }
+
   async function loadAll() {
     if (!memberInfo?.member) throw new Error('Mitgliedschaft erforderlich');
-    const [c, s, t, r, a, profiles, notes, reportEdits] = await Promise.all([
+    const [c, s, t, r, a, profiles, notes, reportEdits, operationForum] = await Promise.all([
       client.from('sdn_characters').select('id,owner_id,status,data,version,created_at').order('created_at'),
       client.from('sdn_character_secrets').select('character_id,data'),
       client.from('sdn_tickets').select('id,ticket_no,character_id,requested_by,comment,operations,changes,priority,is_new,status,created_at,reviewed_at').order('created_at', { ascending: false }),
@@ -113,8 +127,9 @@
       client.from('sdn_discord_profiles').select('user_id,discord_name,discord_username'),
       client.from('sdn_file_notes').select('id,character_id,author_character_id,author_alias,body,created_at').order('created_at',{ascending:false}),
       client.from('sdn_report_edits').select('id,report_id,requested_by,base_report,patch,comment,status,created_at,reviewed_at').order('created_at',{ascending:false}),
+      client.from('sdn_operation_forum_jobs').select('report_id,guild_id,thread_id,starter_message_id,close_revision,notified_revision,state,last_error'),
     ]);
-    [c, s, t, r, a, profiles, notes, reportEdits].forEach(handle);
+    [c, s, t, r, a, profiles, notes, reportEdits, operationForum].forEach(handle);
     const names = new Map(profiles.data.map(row => [row.user_id, row]));
     // Guild nickname is verified and stored server-side after Discord membership check.
     // Fall back to OAuth metadata only if there is no verified profile yet.
@@ -167,9 +182,14 @@
       list.push({id:e.id,requestedBy:displayOwner(e.requested_by),baseReport:e.base_report,patch:e.patch,comment:e.comment,status:e.status,time:new Date(e.created_at).toLocaleString('de-DE')});
       editsByReport.set(e.report_id,list);
     }
+    const forumByReport=new Map(operationForum.data.map(row=>[row.report_id,row]));
     const reports = r.data.map(row => ({
       ...row.report, _dbId: row.id, id: asCode('OPS', row.report_no),
       status: row.status, submittedByMe: row.submitted_by === user.id, submitted: displayOwner(row.submitted_by), createdAt: row.created_at,
+      forumUrl: forumByReport.get(row.id)?.thread_id ? `https://discord.com/channels/${String(forumByReport.get(row.id).guild_id || '')}/${forumByReport.get(row.id).thread_id}` : '',
+      forumThreadId:forumByReport.get(row.id)?.thread_id||'',
+      forumState:forumByReport.get(row.id)?.state||'',
+      forumClosurePending: (forumByReport.get(row.id)?.close_revision||0)>(forumByReport.get(row.id)?.notified_revision||0),
       edits:editsByReport.get(row.id)||[],
       reviewed: row.reviewed_at ? new Date(row.reviewed_at).toLocaleString('de-DE') : '',
     }));
@@ -250,12 +270,13 @@
     enabled: configured, prepare, session, login, logout, verify, loadAll,
     submitTicket, reviewTicket, setCharacterStatus, submitReport, reviewReport, submitReportEdit, reviewReportEdit, addFileNote,
     deleteCharacter, deleteReport, setCharacterActivity,
-    uploadPortraitBlob, originalBlob, publishPortrait, syncCharacterForum,
+    uploadPortraitBlob, originalBlob, publishPortrait, syncCharacterForum, syncOperationForum,
     proposalImageUrl: path => previewUrls.get(path) || '',
     imageUrl: path => (typeof path === 'string' && /^https:\/\/[a-z0-9-]+\.github\.io\//i.test(path) ? path : ''),
     get userId() { return user?.id || null; },
     get discordDisplayName() { return currentDiscordName; },
     get isAdmin() { return Boolean(memberInfo?.admin); },
     get isHR() { return Boolean(memberInfo?.hr); },
+    get isDispatcher() { return Boolean(memberInfo?.dispatcher); },
   };
 })();

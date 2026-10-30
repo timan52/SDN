@@ -8,7 +8,8 @@ const DISCORD_GUILD = Deno.env.get('DISCORD_GUILD_ID')!;
 const GM_ROLE = Deno.env.get('DISCORD_GM_ROLE_ID')!;
 // Optional independent HR role. Leave unset if HR should not yet be enabled.
 const HR_ROLE = Deno.env.get('DISCORD_HR_ROLE_ID') ?? '';
-const ACCESS_ROLE = Deno.env.get('DISCORD_ACCESS_ROLE_ID') ?? ''; // Granted by the SL after a concept ticket is accepted 
+const ACCESS_ROLE = Deno.env.get('DISCORD_ACCESS_ROLE_ID') ?? '';
+const DISPATCHER_ROLE = Deno.env.get('DISCORD_DISPATCHER_ROLE_ID') ?? ''; // Role allowed to create/own operation reports // Granted by the SL after a concept ticket is accepted 
 const ALLOWED_ORIGINS = (Deno.env.get('SDN_ALLOWED_ORIGINS') ?? 'http://localhost:8000').split(',').map(s => s.trim()).filter(Boolean);
 
 function cors(origin: string | null): Record<string, string> {
@@ -29,7 +30,7 @@ Deno.serve(async request => {
   if (request.method !== 'POST') return respond(405, { error: 'Method not allowed' });
   const origin = request.headers.get('Origin');
   if (origin && !ALLOWED_ORIGINS.includes(origin)) return respond(403, { error: 'Origin not allowed' });
-  if (![URL, SERVICE_KEY, DISCORD_TOKEN, DISCORD_GUILD, GM_ROLE, ACCESS_ROLE].every(Boolean)) {
+  if (![URL, SERVICE_KEY, DISCORD_TOKEN, DISCORD_GUILD, GM_ROLE, ACCESS_ROLE, DISPATCHER_ROLE].every(Boolean)) {
     return respond(503, { error: 'Server configuration incomplete' });
   }
 
@@ -61,8 +62,9 @@ Deno.serve(async request => {
     const roles: string[] = serverMember && Array.isArray(member.roles) ? member.roles : [];
     const isAdmin = serverMember && roles.includes(GM_ROLE);
     const isHR = serverMember && Boolean(HR_ROLE) && roles.includes(HR_ROLE);
+    const isDispatcher = serverMember && roles.includes(DISPATCHER_ROLE);
     // Staff can administer the archive even when they don't hold the players' access role.
-    const verified = serverMember && (roles.includes(ACCESS_ROLE) || isAdmin || isHR);
+    const verified = serverMember && (roles.includes(ACCESS_ROLE) || isAdmin || isHR || isDispatcher);
     const checkedAt = new Date();
     const expires = new Date(checkedAt.getTime() + (verified ? 5 * 60_000 : 0));
     const { error: updateError } = await admin.from('sdn_access').upsert({
@@ -70,6 +72,7 @@ Deno.serve(async request => {
       discord_id: discordId,
       is_admin: Boolean(isAdmin),
       is_hr: Boolean(isHR),
+      is_dispatcher: Boolean(isDispatcher),
       checked_at: checkedAt.toISOString(),
       verified_until: expires.toISOString(),
     });
@@ -85,7 +88,7 @@ Deno.serve(async request => {
       });
       if (profileError) return respond(503, { error: 'Cannot update verified Discord profile' });
     }
-    return respond(200, { member: verified, serverMember, accessRole: serverMember && roles.includes(ACCESS_ROLE), admin: Boolean(isAdmin), hr: Boolean(isHR), expiresAt: expires.toISOString() });
+    return respond(200, { member: verified, serverMember, accessRole: serverMember && roles.includes(ACCESS_ROLE), admin: Boolean(isAdmin), hr: Boolean(isHR), dispatcher: Boolean(isDispatcher), expiresAt: expires.toISOString() });
   } catch {
     return respond(503, { error: 'Discord membership check could not be completed' });
   }

@@ -1,106 +1,82 @@
-# SDN v0.25 – Discord-Rollenfreigabe und Charakterforum
+# SDN v0.26 – Dispatcher-Rolle und automatische Einsatz-Notrufe
 
-Dieses Paket ist ein **Update für die funktionierende SDN-v0.24-Website**. Es enthält keine `config.js`, keinen Bot-Token und keine anderen Zugangsdaten. Bestehende Charaktere, Berichte, Tickets und Portraits bleiben erhalten.
+**Update für die bestehende v0.25-Website, keine Neuinstallation.** Dieses Paket enthält keine echte `config.js`, keine privaten Schlüssel und keine bereits gespeicherten Daten.
 
-## Was neu ist
+## Neue Funktionen
 
-1. Login + Datenzugriff nur nach manueller Vergabe einer Discord-Rolle durch die SL. Die SL- und optional HR-Rolle haben weiterhin Zugang. Die bestehende Supabase-RLS schützt die Akten auch vor direkten Datenbankaufrufen ohne frische Rollenfreigabe.
-2. Sobald ein **neuer Charakter** über sein Ticket genehmigt wurde, veröffentlicht die Serverfunktion das bereits genehmigte Portrait in GitHub und erstellt danach einen **Discord-Forenbeitrag**. Titel: Alias und SDN-ID; Anfangsnachricht: Spieler-Ping, Portrait und direkter Link zur Akte.
-3. Der Discord-Forenlink erscheint automatisch oben in der Personalakte als „Charakterkanal“. Die Angabe kann nicht länger über das Formular gefälscht oder manuell verändert werden.
-4. Fehlgeschlagene Forenveröffentlichungen bleiben in einer Warteschlange gespeichert. Bei SL-Anmeldung wird eine begrenzte Anzahl erneut versucht. Außerdem hat die SL in der Personalakte einen Button „FORENBEITRAG ERSTELLEN / ERNEUT VERSUCHEN“.
-5. Die URL `https://timan52.github.io/SDN/?character=<UUID>` öffnet nach Anmeldung direkt die Personalakte. Der Link wird beim Discord-Login für den Rücksprung zwischengespeichert.
+- Discord-Rolle **Dispatcher** zusätzlich zu `SDN-Zugang`, SL und optional HR.
+- Die Webseite prüft diese Rolle über die bestehende serverseitige Discord-Mitgliedschaftskontrolle. Ein Dispatcher darf Einsätze erstellen sowie **die von seinem eigenen Discord-Account eingereichten** Einsatzberichte bearbeiten. Andere Spieler dürfen weiterhin eigene Charaktere bearbeiten, neue Charaktere beantragen und freigegebene Akten und Einsätze lesen. Nur SL darf Anträge genehmigen oder löschen.
+- Ein neu erstellter offener Einsatz ist ein **Notruf**: Titel, Level, Ort, Kunde, Einsatzbeginn, Ausgangslage, Dispatcher. **Noch keine Helden oder kein Einsatzverlauf nötig**, bis die Teilnehmer feststehen.
+- Ein Dispatcher **als Charakter** (Position `Dispatcher`, freigegeben) muss im Formular ausgewählt werden. Das ist getrennt von der **Discord-Rolle** des Erstellers.
+- Erst nach **SL-Freigabe** wird automatisch im konfigurierten Discord-Einsatzforum ein Beitrag mit Name, Einsatzort, Auftraggeber, Ausgangslage und dem zugewiesenen Dispatcher erstellt.
+- Spieler können dort freiwillig antworten. Der Dispatcher weist die teilnehmenden Helden danach über **Daten bearbeiten → Änderungsticket** dem Einsatz zu. Auch dieses Ticket muss die SL genehmigen.
+- Bei einem **genehmigten Abschluss** (beim Erstellen oder durch späteres Änderungsticket) antwortet der Bot mit `❌ EINSATZ ABGESCHLOSSEN`, erwähnt den Dispatcher-Account und die Besitzer der eingetragenen Helden. Der Bot setzt außerdem eine **❌-Reaktion** auf den ursprünglichen Forenbeitrag.
+- Der Thread-Link wird in der Einsatzdetailansicht gezeigt; er wird serverseitig gespeichert und lässt sich nicht über ein frei bearbeitbares Berichtsfeld manipulieren.
+- Vorhandene Berichte werden **nicht automatisch** in Discord gepostet.
 
-## Wichtig: Discord-Forenberechtigungen
+## Installation – bitte in dieser Reihenfolge
 
-Forenbeiträge sind **öffentliche Threads im Forum**, keine eigenen Discord-Kanäle mit individuellen Berechtigungen. Sie erben die Berechtigungen des Forums.
+1. **Sicherung anlegen.** GitHub: vorherigen funktionierenden Commit notieren oder Branch anlegen. Supabase: Datenbankexport/Backup vor der Migration sichern. Nicht die alte Initialmigration erneut ausführen.
+2. **Discord:** Servereinstellungen → Rollen → eine Rolle `Dispatcher` erstellen/auswählen. Discord-Entwicklermodus aktivieren und die **Rollen-ID** kopieren. Weisen Sie sie den erlaubten Dispatchern zu.
+3. **Discord:** Einen neuen **Forumskanal** z. B. `sdn-notrufe` einrichten. Forum-ID kopieren (nicht eine Thread-ID). Forum für `SDN-Zugang` lesbar lassen; `Nachrichten in Threads senden` erlauben, damit Spieler ihre Teilnahme anbieten können. `Beiträge erstellen` für Spieler bei Bedarf deaktivieren.
+4. **Discord-Bot im Einsatzforum:** `Kanal ansehen`, `Nachrichten senden` (neuen Forumspost erstellen), `Nachrichten in Threads senden`, `Nachrichtenverlauf lesen`, `Reaktionen hinzufügen`, optional `Links einbetten` erlauben. Der Bot kann weiterhin in der Mitgliedschaftsliste offline wirken; die Supabase-Funktion verwendet die Discord-REST-API.
+5. **Supabase → Edge Functions → Secrets:** Folgende **neuen** Secrets hinzufügen:
 
-- Der Bot benötigt im Charakterforum **Kanal ansehen**, **Nachrichten senden** (damit er neue Forenbeiträge eröffnen kann) und **Links einbetten**.
-- Spieler mit `SDN-Zugang` benötigen **Kanal ansehen**, **Nachrichten in Threads senden** und **Dateien anhängen**. So können sie in ihren Charakterbeiträgen Texte und Bilder posten.
-- Um zu verhindern, dass Spieler selbst Forenbeiträge eröffnen, kann **Nachrichten senden** für die Spielerrolle im Forum deaktiviert werden. **Nachrichten in Threads senden** muss dagegen aktiviert bleiben.
-- Andere Spieler mit derselben Berechtigung dürfen technisch auch in fremden Forenbeiträgen antworten. Discord bietet **keine nativen Rollenberechtigungen pro öffentlichem Forenbeitrag**. Wenn ausschließlich der jeweilige Charakterbesitzer schreiben darf, braucht es eine andere Struktur oder zusätzliche Bot-Moderation.
+   | Name | Wert |
+   | --- | --- |
+   | `DISCORD_DISPATCHER_ROLE_ID` | Rollen-ID von `Dispatcher` |
+   | `DISCORD_OPERATION_FORUM_CHANNEL_ID` | ID des Einsatzforums |
 
-## Einrichtung in der richtigen Reihenfolge
+   Bestehende Werte `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_GM_ROLE_ID`, `DISCORD_HR_ROLE_ID`, `DISCORD_ACCESS_ROLE_ID`, `SDN_ALLOWED_ORIGINS` und `DISCORD_FORUM_CHANNEL_ID` bleiben bestehen. **Nicht im GitHub-Repository speichern.**
+6. **SQL-Migration:** Supabase → SQL Editor → **den Inhalt** der Datei `supabase/migrations/202610300001_dispatcher_operations_forum.sql` kopieren und einmalig ausführen. Das ergänzt die Dispatcher-Berechtigung, überprüft Berichtsanträge serverseitig und legt die Notruf-Warteschlange an. Es entfernt keine bisherigen Einsätze. **Diese Migration ist nicht für blindes Wiederholen gedacht.**
+7. **Rollenprüffunktion aktualisieren:** Die mitgelieferte Datei `supabase/functions/verify-discord/index.ts` in deinem lokalen SDN-Projekt ersetzen. PowerShell im Projektordner:
 
-### 1. Discord-Rolle anlegen
+   ```powershell
+   npx.cmd supabase functions deploy verify-discord
+   ```
 
-Discord-Server → **Servereinstellungen → Rollen → Rolle erstellen**. Beispielname: `SDN-Zugang`.
+8. **Neue Forum-Funktion deployen:** Ordner `supabase/functions/sync-operation-forum` aus dem Update in dein lokales Projekt kopieren:
 
-Gewährt wird diese Rolle künftig **manuell durch die Spielleitung nach einem genehmigten Charakterkonzept im Discord-Ticket**. Die Ticketbearbeitung selbst bleibt unverändert. In Discord unter Benutzereinstellungen → Erweitert → Entwicklermodus die Rolle-ID kopieren.
+   ```powershell
+   npx.cmd supabase functions deploy sync-operation-forum
+   ```
 
-### 2. Ein Forum anlegen
+9. **Website:** `index.html`, `app.js`, `backend.js` aus dem ZIP in deinem Repository `timan52/SDN` ersetzen, committen und auf `main` pushen. **Nicht** `config.js`, `styles.css`, die Portrait-Dateien oder die übrigen Supabase-Funktionen ersetzen. Website mit `Strg+Umschalt+R` aktualisieren. Durch neuen Discord-Login/Neuladen wird die Dispatcher-Rolle erkannt.
 
-Discord-Server → Kanal erstellen → **Forum** (Beispiel: `charakterakten`). Forum-ID über Rechtsklick/Entwicklermodus kopieren. Stelle die Berechtigungen wie oben beschrieben ein. Den Bot zu dieser Forumsberechtigung hinzufügen.
+## Funktionstest mit zwei Rollen
 
-### 3. Supabase-Secrets hinterlegen
+**A. Nutzer ohne Dispatcher-Rolle:** Kann Personalakten beantragen, sieht freigegebene Einsätze, aber keinen Button `Einsatzprotokoll erstellen`. Direkte RPC-Aufrufe sollen ebenfalls abgewiesen werden.
 
-Supabase Dashboard → **Edge Functions → Secrets**:
+**B. Nutzer mit Dispatcher-Rolle:** Sieht den Erstellen-Button. Kann einen offenen Einsatz ohne Helden und ohne Verlauf, jedoch mit **Titel, Kunde, Einsatzort, Einsatzlevel, Startdatum, Ausgangslage und Dispatcher-Charakter** absenden. Das neue Protokoll bleibt `PENDING`; es darf noch kein neuer Discord-Post erscheinen.
 
-| Secret | Wert |
-|---|---|
-| `DISCORD_ACCESS_ROLE_ID` | Discord-Rollen-ID von `SDN-Zugang` |
-| `DISCORD_FORUM_CHANNEL_ID` | Numerische ID des **Forums**, nicht eines Forenbeitrags |
-| `SDN_SITE_URL` | `https://timan52.github.io/SDN/` |
+**C. SL:** Öffnet die Einsatzdetailansicht, genehmigt den Bericht. Danach sollte ein Forumspost mit `🚨 OPS-...` erscheinen. Die genehmigte Akte enthält `↗ NOTRUF IM DISCORD-FORUM`. Das bestehende Charakterforum aus v0.25 bleibt unabhängig.
 
-Bereits vorhandene Werte `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_GM_ROLE_ID`, optional `DISCORD_HR_ROLE_ID` und `SDN_ALLOWED_ORIGINS` bleiben bestehen. **Keine Secrets in GitHub hochladen.**
+**D. Dispatcher:** Öffnet sein eigenes Protokoll, ergänzt nach Forum-Rückmeldungen die Helden und sendet ein Änderungsticket. Erst nach SL-Genehmigung ist die neue Team-Zuweisung offiziell.
 
-### 4. Die aktualisierte Rollenprüfung deployen
+**E. Abschluss:** Dispatcher ergänzt Einsatzverlauf, Einsatzende und Abschluss/Ergebnis; im abgeschlossenen Protokoll muss mindestens ein Held stehen. SL genehmigt das Änderungsticket. Im gleichen Forumspost erscheint die Abschlussnachricht, die Beteiligten werden gepingt und der Bot setzt ❌ auf die Startnachricht.
 
-Im lokalen GitHub-SDN-Projekt die Datei `supabase/functions/verify-discord/index.ts` ersetzen und in PowerShell ausführen:
+**F. Rechte:** Ein fremder Dispatcher kann die Einsatzakte lesen, aber keinen Änderungsantrag dafür stellen. Nur SL sieht und verwendet Freigabe- und Löschaktionen.
 
-```powershell
-npx.cmd supabase functions deploy verify-discord
-```
+## Wenn Discord nichts veröffentlicht
 
-Die **neue** Prüfung akzeptiert nur Accounts mit `SDN-Zugang`, SL oder optional HR. Bis ein Spieler die Rolle erhält, bleibt sein Datenzugriff gesperrt. Die Anmeldung bei Discord kann trotzdem funktionieren.
+1. Prüfen: Handelt es sich um einen **genehmigten** Bericht? Ein Entwurf oder ein offenes Freigabeticket wird nicht veröffentlicht.
+2. Als SL die Einsatzakte öffnen und **DISCORD-NOTRUF SYNCHRONISIEREN** klicken. Nicht mehrfach auf den Button klicken, wenn Discord gerade einen Beitrag erstellen könnte.
+3. Supabase → Edge Functions → `sync-operation-forum` → Logs/Invocations prüfen.
+4. Im SQL Editor lässt sich der Auftragsstatus prüfen:
 
-### 5. Datenbankmigration ausführen
+   ```sql
+   select r.report_no, r.status, j.state, j.attempts, j.last_error,
+          j.thread_id, j.close_revision, j.notified_revision
+   from public.sdn_reports r
+   left join public.sdn_operation_forum_jobs j on j.report_id=r.id
+   order by r.created_at desc limit 20;
+   ```
 
-Supabase Dashboard → **SQL Editor**. **Den Inhalt** von `supabase/migrations/202610290001_discord_access_and_forum.sql` kopieren und ausführen – **nicht den Dateinamen**.
+**Wichtige Einschränkungen:**
 
-Die Migration legt die Warteschlange für Forenbeiträge an und sperrt direkte Änderungen des Links auf den Discord-Charakterkanal. Am Ende werden bisherige Rollenprüfungen ungültig gemacht, damit die neue Freigaberolle wirklich geprüft werden muss.
-
-**Wichtig:** Diesen Schritt erst nach dem Deploy von `verify-discord` ausführen. Die übrigen früheren SDN-Migrationen müssen bereits vorhanden sein.
-
-### 6. Neue Forenfunktion deployen
-
-Ordner `supabase/functions/sync-character-forum/index.ts` aus dem ZIP ins lokale Projekt kopieren:
-
-```powershell
-npx.cmd supabase functions deploy sync-character-forum
-```
-
-Die Funktion verwendet den vorhandenen Bot-Token nur serverseitig; es wird kein dauerhafter Prozess auf deinem PC benötigt.
-
-### 7. Website aktualisieren
-
-Die Dateien `app.js` und `backend.js` aus dem ZIP in `timan52/SDN` ersetzen, auf `main` committen und pushen. `config.js`, `index.html`, `styles.css`, `portrait-editor.js`, Portraits und andere Daten **nicht** ersetzen.
-
-Öffne die Website und aktualisiere mit `Strg + Umschalt + R`.
-
-## Testplan
-
-1. Discord-Nutzer **ohne** SDN-Zugangsrolle: OAuth-Login möglich, aber `ACCESS DENIED`; keine Akten in der Datenbank abrufbar.
-2. SL-Account **ohne** Spielerrolle: Zugriff auf die Personalübersicht und SL-Funktionen weiterhin möglich.
-3. Testnutzer **mit** Zugangsrolle: vollständiger Login, Erstellung eines neuen Charaktertickets möglich.
-4. SL genehmigt neuen Charakter mit bereits hochgeladenem und zugeschnittenem Portrait.
-5. Nach GitHub-Portraitveröffentlichung erzeugt die neue Edge Function im Forum einen Beitrag mit **Alias + SDN-ID**, **Spieler-Ping**, **Bild** und **Link** zur Personalakte. Ein Spieler kann dort Bilder hochladen.
-6. Personalakte neu laden: oben erscheint der Link `↗ CHARAKTERKANAL`. Direktlink aus Discord führt nach Login zur richtigen Akte.
-7. Wiederholte Freigabe / erneuter Funktionsaufruf darf nicht einfach einen zweiten Forenbeitrag erzeugen. Bei einem Fehler den neuen SL-Wiederholen-Button verwenden und die Logs unter **Edge Functions → sync-character-forum → Logs** prüfen.
-8. Spielerrolle wieder entfernen: Der Zugriff sollte nach erneuter Prüfung verschwinden. Bestehende Prüfungen laufen nach maximal ca. **fünf Minuten** ab; der Browser prüft alle zwei Minuten nach.
-
-## Bereits genehmigte Charaktere
-
-Bestehende Akten werden beim Datenbank-Upgrade **nicht automatisch** als neue Forenbeiträge veröffentlicht. Das verhindert, dass Testcharaktere ungefragt als Beiträge erscheinen. Als SL kannst du eine bereits genehmigte Akte öffnen und dort `FORENBEITRAG ERSTELLEN / ERNEUT VERSUCHEN` wählen.
-
-## Ausfallsicherheit und Grenzen
-
-- Die Datenbank genehmigt die Personalakte unabhängig von Discord. Kann Discord gerade keinen Beitrag anlegen, bleibt ein Auftrag als `failed` gespeichert und kann wiederholt werden.
-- Ein seltener Grenzfall bleibt: Discord erstellt den Beitrag erfolgreich, aber die anschließende Datenbankbestätigung scheitert. Bei einem späteren Wiederholungsversuch könnte dann ein zweiter Beitrag entstehen. Vor einem manuellen Retry in diesem Fall den Discord-Forumskanal prüfen. Für streng garantierte Einmaligkeit braucht es einen zusätzlichen Discord-Abgleich oder einen dedizierten Worker.
-- Ohne laufenden Worker erfolgt ein automatischer Wiederholungsversuch bei SL-Besuch; es gibt in dieser Version keine zeitgesteuerten Hintergrundläufe.
-- Ein Forenbeitrag erbt die Schreibrechte seines Forums. Nur-dieser-eine-Spieler-Schreibrechte pro öffentlichem Forenbeitrag sind nativ nicht möglich.
-- Bilder werden in den Beiträgen als Embed auf das **öffentliche freigegebene GitHub-Portrait** verlinkt; weitere Bilder laden Spieler direkt in Discord hoch. Supabase speichert sie nicht zusätzlich.
-- Neue Discord-Rollen werden ausschließlich von der SL vergeben. Der Bot vergibt die Website-Zugangsrolle nicht selbst.
-
-## Unveränderte Bereiche
-
-Alle bisherigen Aktenfelder, Ticketfreigaben, Einsatzprotokolle, Kacheln, Skillmatrix, Aktennotizen, Medizinische Akte, private TOP SECRET-Daten und Profile bleiben Bestandteil der Website. Dieses Paket enthält keine neue CSS-Datei.
+- Die Freigabe wird in Supabase sofort gespeichert. Die Discord-Synchronisierung wird beim SL-Genehmigungsklick ausgeführt und bei der nächsten SL-Anmeldung erneut versucht. **Es ist kein dauerhaft laufender Bot oder zeitgesteuerter Worker installiert.** Eine durchgehend automatische Verarbeitung auch ohne SL-Login würde später einen Cron/Webhook erfordern.
+- Wie bei der Charakterforum-Funktion v0.25 kann ein seltener Ausfall **nach erfolgreichem Discord-Post und vor dem Speichern der Discord-ID** beim Retry zu einem doppelten Beitrag führen. In diesem Fall vor einem erneuten Versuch das Forum kontrollieren.
+- Das erneute Öffnen eines bereits abgeschlossenen Einsatzes entfernt eine früher gesetzte ❌-Reaktion **nicht**. Falls Wiederöffnungen im RP benötigt werden, sollten wir den Ablauf später ausdrücklich modellieren.
+- Verknüpfte ehemalige Forenposts werden beim Löschen eines Einsatzes **nicht** automatisch auf Discord gelöscht.
+- Der bestehende, zuvor gemeldete Fehler der **Charakterforum-Synchronisierung** aus v0.25 wird durch diese neue Einsatzfunktion nicht automatisch behoben. Beide Edge Functions sind getrennt.
+- Die neue Backend- und SQL-Version wurde **nicht gegen deine laufende Datenbank und deinen Discord-Server getestet**. Nach dem Installieren erst mit einem Testeinsatz prüfen.
